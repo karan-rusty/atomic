@@ -71,7 +71,7 @@ const params = {
   view: 'atom' as 'atom' | 'orbital',
   orbital: '2p_z',
   density: 100000,
-  pointSize: 0.06,
+  pointSize: 0.03,
   phaseColor: true,
   autoRotate: true,
 };
@@ -313,13 +313,6 @@ pointsInput.value = String(params.density);
 pointsInput.addEventListener('change', () => {
   params.density = Number(pointsInput.value);
   rebuild(false);
-});
-
-const psizeInput = $<HTMLInputElement>('psize');
-psizeInput.value = String(params.pointSize);
-psizeInput.addEventListener('input', () => {
-  params.pointSize = Number(psizeInput.value);
-  material.size = params.pointSize;
 });
 
 const phaseInput = $<HTMLInputElement>('phase');
