@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node hydrogen.test.ts"
+    "test": "node hydrogen.test.ts && node atoms.test.ts"
   },
   "dependencies": {
     "lil-gui": "^0.21.0",
