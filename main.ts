@@ -20,6 +20,11 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.autoRotateSpeed = 1.2;
 
+// Fixed camera: never auto-reframes. Clouds keep their true relative size.
+const CAM_DIST = 16;
+camera.position.set(0.7, 0.45, 0.9).normalize().multiplyScalar(CAM_DIST);
+controls.target.set(0, 0, 0);
+
 // --- axes + nucleus marker ---
 function makeAxes(): THREE.LineSegments {
   const pos = new Float32Array([-1, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1]);
@@ -75,7 +80,7 @@ const params = {
   autoRotate: true,
 };
 
-const POINT_SCALE = 0.006; // point size as a fraction of the cloud radius
+const POINT_SCALE = 0.012; // point size as a fraction of the cloud radius
 
 const material = new THREE.PointsMaterial({
   size: 1, // overwritten per rebuild; scaled to the cloud so tiny clouds don't blob
@@ -141,7 +146,7 @@ function buildOrbitalCloud(Z: number): { positions: Float32Array; colors: Float3
   return { positions, colors, count: signs.length };
 }
 
-function rebuild(reframe: boolean): void {
+function rebuild(): void {
   const Z = Z_of(params.element);
   const { positions, colors, count } =
     params.view === 'atom' ? buildAtomCloud(Z) : buildOrbitalCloud(Z);
@@ -159,16 +164,18 @@ function rebuild(reframe: boolean): void {
   lastCount = count;
   lastRadius = percentileRadius(positions, count, 0.98);
 
-  material.size = lastRadius * POINT_SCALE;
+  // Camera is fixed, so point size adapts: proportional to the cloud, clamped
+  // to a 2-8 px band at the fixed distance so dots never vanish or blob out.
+  updatePointSize();
   axes.scale.setScalar(lastRadius * 1.15);
   nucleus.scale.setScalar(lastRadius * 0.012);
-
-  if (reframe) {
-    const d = 3 * lastRadius;
-    camera.position.set(0.7, 0.45, 0.9).normalize().multiplyScalar(Math.max(d, 2));
-    controls.target.set(0, 0, 0);
-  }
   updateInfo();
+}
+
+function updatePointSize(): void {
+  const worldPerPixel =
+    (2 * CAM_DIST * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) / viewport.clientHeight;
+  material.size = Math.min(8 * worldPerPixel, Math.max(2 * worldPerPixel, lastRadius * POINT_SCALE));
 }
 
 const sup = (n: number) => String(n).replace(/[0-9]/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[+d]);
@@ -293,35 +300,35 @@ const elementSel = $<HTMLSelectElement>('element');
 elementSel.addEventListener('change', () => {
   params.element = elementSel.value;
   updateOrbitals();
-  rebuild(true);
+  rebuild();
 });
 
 for (const b of document.querySelectorAll<HTMLButtonElement>('#view button')) {
   b.addEventListener('click', () => {
     params.view = b.dataset.v as 'atom' | 'orbital';
     syncView();
-    rebuild(true);
+    rebuild();
   });
 }
 
 const orbSel = $<HTMLSelectElement>('orbital');
 orbSel.addEventListener('change', () => {
   params.orbital = orbSel.value;
-  rebuild(true);
+  rebuild();
 });
 
 const pointsInput = $<HTMLInputElement>('points');
 pointsInput.value = String(params.density);
 pointsInput.addEventListener('change', () => {
   params.density = Number(pointsInput.value);
-  rebuild(false);
+  rebuild();
 });
 
 const phaseInput = $<HTMLInputElement>('phase');
 phaseInput.checked = params.phaseColor;
 phaseInput.addEventListener('change', () => {
   params.phaseColor = phaseInput.checked;
-  if (params.view === 'orbital') rebuild(false);
+  if (params.view === 'orbital') rebuild();
 });
 
 const rotInput = $<HTMLInputElement>('rot');
@@ -336,6 +343,7 @@ addEventListener('resize', () => {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
+  updatePointSize();
 });
 
 const sizeToViewport = () => renderer.setSize(viewport.clientWidth, viewport.clientHeight);
@@ -343,7 +351,7 @@ sizeToViewport();
 camera.aspect = viewport.clientWidth / viewport.clientHeight;
 camera.updateProjectionMatrix();
 
-rebuild(true);
+rebuild();
 
 let frames = 0;
 let t0 = performance.now();
