@@ -1,6 +1,10 @@
 // main.ts — three.js point-cloud renderer wired to the custom AtomSim UI.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import './style.css';
 import {
   mostProbableRadius, nodeRadii, psiAt, radial,
@@ -51,18 +55,6 @@ const marker = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 12), new THREE.Mes
 marker.visible = false;
 scene.add(marker);
 
-const sprite = (() => {
-  const c = document.createElement('canvas');
-  c.width = c.height = 64;
-  const ctx = c.getContext('2d')!;
-  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  g.addColorStop(0, 'rgba(255,255,255,1)');
-  g.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 64, 64);
-  return new THREE.CanvasTexture(c);
-})();
-
 const POS = new THREE.Color('#ff5c9e');
 const NEG = new THREE.Color('#4db8ff');
 const DARK = new THREE.Color('#2a1030');
@@ -94,10 +86,48 @@ const params = {
 };
 
 const POINT_SCALE = 0.008;
-const material = new THREE.PointsMaterial({
-  size: 1, map: sprite, vertexColors: true, transparent: true,
-  blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+const pointUniforms = {
+  uSize: { value: 0.1 },   // world-space point size
+  uScale: { value: 800 },  // viewport scaling for size attenuation
+  uDist: { value: 16 },    // camera distance, for depth fade
+};
+const material = new THREE.ShaderMaterial({
+  uniforms: pointUniforms,
+  vertexShader: `
+    attribute vec3 aColor;
+    uniform float uSize;
+    uniform float uScale;
+    uniform float uDist;
+    varying vec3 vColor;
+    varying float vFade;
+    void main() {
+      vColor = aColor;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      gl_Position = projectionMatrix * mv;
+      gl_PointSize = uSize * uScale / max(-mv.z, 0.0001);
+      vFade = clamp(1.6 - (-mv.z) / max(uDist, 0.0001), 0.22, 1.0);
+    }
+  `,
+  fragmentShader: `
+    varying vec3 vColor;
+    varying float vFade;
+    void main() {
+      float r = length(gl_PointCoord - 0.5);
+      if (r > 0.5) discard;
+      float a = smoothstep(0.5, 0.0, r) * vFade;
+      gl_FragColor = vec4(vColor * a, a);
+    }
+  `,
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
 });
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.55, 0.5, 0.18);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
 
 let points: THREE.Points | null = null;
 let lastCount = 0;
@@ -213,7 +243,7 @@ function rebuild(): void {
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.setAttribute('aColor', new THREE.BufferAttribute(colors, 3));
   if (points) { scene.remove(points); points.geometry.dispose(); }
   points = new THREE.Points(geo, material);
   scene.add(points);
@@ -242,7 +272,10 @@ function frameCloud(): void {
 function updatePointSize(): void {
   const dist = camera.position.distanceTo(controls.target) || CAM_DIST;
   const wpp = (2 * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) / viewport.clientHeight;
-  material.size = Math.min(8 * wpp, Math.max(1.5 * wpp, lastRadius * POINT_SCALE));
+  const size = Math.min(8 * wpp, Math.max(1.5 * wpp, lastRadius * POINT_SCALE));
+  pointUniforms.uSize.value = size;
+  pointUniforms.uScale.value =
+    (viewport.clientHeight * renderer.getPixelRatio()) / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
 }
 
 // ---------- left-panel plots ----------
@@ -608,10 +641,12 @@ addEventListener('resize', () => {
   const w = viewport.clientWidth, h = viewport.clientHeight;
   camera.aspect = w / h; camera.updateProjectionMatrix();
   renderer.setSize(w, h);
+  composer.setSize(w, h);
   updatePointSize(); updateScaleBar(); drawCrossSection();
 });
 
 renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+composer.setSize(viewport.clientWidth, viewport.clientHeight);
 camera.aspect = viewport.clientWidth / viewport.clientHeight;
 camera.updateProjectionMatrix();
 
@@ -621,7 +656,8 @@ frameCloud();
 let frames = 0, t0 = performance.now();
 renderer.setAnimationLoop(() => {
   controls.update();
-  renderer.render(scene, camera);
+  pointUniforms.uDist.value = camera.position.distanceTo(controls.target) || CAM_DIST;
+  composer.render();
   updateAxisLabels();
   frames++;
   const now = performance.now();
