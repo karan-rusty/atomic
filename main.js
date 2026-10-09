@@ -35,7 +35,7 @@ const NEG = new THREE.Color('#00a6ff');
 const NEUTRAL = new THREE.Color('#9bd4ff');
 
 const params = {
-  orbital: '3d_z2',
+  orbital: '2p_z',
   density: 100000,
   pointSize: 0.15,
   phaseColor: true,
@@ -80,8 +80,9 @@ function rebuild(reframe) {
 
   if (reframe) {
     // Orbital radius scales as ~n^2 a0; pull the camera back to match.
-    const d = 20 * n * n;
-    camera.position.set(0, 0, d);
+    // View from a diagonal so lobes (e.g. 2p_z along z) aren't seen end-on.
+    const d = 14 * n * n;
+    camera.position.set(0.7, 0.45, 0.9).normalize().multiplyScalar(d);
     controls.target.set(0, 0, 0);
   }
 }
