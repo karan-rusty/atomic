@@ -66,8 +66,9 @@ export interface Cloud {
 }
 
 // Sample `count` electron positions from |psi_nlm|^2.
+// `Z` is the effective nuclear charge (hydrogenic shape scaled by 1/Z).
 // Returns Cartesian positions and the sign of psi at each point (for phase color).
-export function sampleCloud(n: number, l: number, m: number, count: number): Cloud {
+export function sampleCloud(n: number, l: number, m: number, count: number, Z = 1): Cloud {
   const rMax = Math.max(10, 5 * n * n);
 
   // Peak of the radial density P(r) = r^2 R(r)^2, from a fine grid.
@@ -116,7 +117,37 @@ export function sampleCloud(n: number, l: number, m: number, count: number): Clo
   }
   // shortcut: rejection sampling; swap to inverse-CDF tables if high-n
   // clouds (n>=4, >=500k points) cause a visible hitch.
+  if (Z !== 1) for (let i = 0; i < positions.length; i++) positions[i] /= Z;
   return { positions, signs };
+}
+
+// Sample `count` points from a filled subshell: radial |R_nl|^2, isotropic
+// angle (sum over m of |Y_lm|^2 is constant, so a full shell is spherical).
+export function sampleShell(n: number, l: number, Z: number, count: number): Float32Array {
+  const rMax = Math.max(10, 5 * n * n);
+  let pmax = 0;
+  for (let i = 1; i < 4000; i++) {
+    const r = (i / 4000) * rMax;
+    const v = r * r * radial(n, l, r) ** 2;
+    if (v > pmax) pmax = v;
+  }
+  pmax *= 1.001;
+
+  const positions = new Float32Array(count * 3);
+  for (let k = 0; k < count; k++) {
+    let r: number;
+    for (;;) {
+      r = Math.random() * rMax;
+      if (Math.random() * pmax < r * r * radial(n, l, r) ** 2) break;
+    }
+    const u = Math.random() * 2 - 1;
+    const phi = Math.random() * 2 * Math.PI;
+    const st = Math.sqrt(1 - u * u);
+    positions[3 * k] = (r * st * Math.cos(phi)) / Z;
+    positions[3 * k + 1] = (r * st * Math.sin(phi)) / Z;
+    positions[3 * k + 2] = (r * u) / Z;
+  }
+  return positions;
 }
 
 export interface Orbital {
@@ -133,12 +164,12 @@ const F: Record<string, string> = {
   '-2': 'f_xyz', '3': 'f_x(x2-3y2)', '-3': 'f_y(3x2-y2)',
 };
 
-// Display name -> { n, l, m } for n = 1..4.
+// Display name -> { n, l, m } for n = 1..6, l <= 3 (s..f).
 export const ORBITALS: Record<string, Orbital> = (() => {
   const byL = [S, P, D, F];
   const map: Record<string, Orbital> = {};
-  for (let n = 1; n <= 4; n++) {
-    for (let l = 0; l < n; l++) {
+  for (let n = 1; n <= 6; n++) {
+    for (let l = 0; l < Math.min(n, 4); l++) {
       for (const mKey in byL[l]) {
         map[`${n}${byL[l][mKey]}`] = { n, l, m: Number(mKey) };
       }
