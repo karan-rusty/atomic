@@ -10,7 +10,7 @@ import {
   mostProbableRadius, nodeRadii, psiAt, radial,
   sampleCloud, sampleShell, sampleSuperposition, subshellOrbitals, type Orbital,
 } from './hydrogen.ts';
-import { SYMBOLS, electronConfig, elementName, orbitalsForAtom, zeff } from './atoms.ts';
+import { SYMBOLS, electronConfig, elementName, orbitalsForAtom, atomUnits, zeff, type AtomUnit } from './atoms.ts';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -181,28 +181,37 @@ function currentDensity(x: number, y: number, z: number): number {
 }
 
 function buildAtomCloud(Z: number): { positions: Float32Array; colors: Float32Array; count: number } {
-  const shells = electronConfig(Z);
-  const per = Math.max(1000, Math.floor(params.density / shells.length));
-  const count = per * shells.length;
+  const units = atomUnits(Z);
+  const per = Math.max(1000, Math.floor(params.density / units.length));
+  const count = per * units.length;
   const positions = new Float32Array(count * 3);
   const colors = new Float32Array(count * 3);
   const c = new THREE.Color();
+  const val = (u: AtomUnit, x: number, y: number, z: number): number => {
+    if (u.m === null) {
+      const r = Math.hypot(x, y, z);
+      return radial(u.n, u.l, u.ze * r) ** 2 * r * r;
+    }
+    return psiAt(u.n, u.l, u.m, u.ze, x, y, z) ** 2;
+  };
+
   let off = 0;
-  for (const s of shells) {
-    const ze = zeff(Z, s.n, s.l);
-    positions.set(sampleShell(s.n, s.l, ze, per), off * 3);
-    const rmp = mostProbableRadius(s.n, s.l, ze);
-    const peak = rmp * rmp * radial(s.n, s.l, ze * rmp) ** 2 || 1;
-    for (let i = 0; i < per; i++) {
-      if (params.colour === 'density') {
-        const x = positions[3 * (off + i)], y = positions[3 * (off + i) + 1], z = positions[3 * (off + i) + 2];
-        const r = Math.hypot(x, y, z);
-        const v = radial(s.n, s.l, ze * r) ** 2 * r * r;
-        densityColor(Math.min(1, Math.sqrt(v / peak)), c);
-      } else {
-        c.copy(SHELL_COLORS[s.n]);
+  for (const u of units) {
+    const chunk = u.m === null ? sampleShell(u.n, u.l, u.ze, per) : sampleCloud(u.n, u.l, u.m, per, u.ze).positions;
+    positions.set(chunk, off * 3);
+
+    if (params.colour === 'density') {
+      const vals = new Float32Array(per);
+      let max = 1e-30;
+      for (let i = 0; i < per; i++) {
+        const v = val(u, chunk[3 * i], chunk[3 * i + 1], chunk[3 * i + 2]);
+        vals[i] = v;
+        if (v > max) max = v;
       }
-      writeColor(colors, off + i, c);
+      for (let i = 0; i < per; i++) { densityColor(Math.sqrt(vals[i] / max), c); writeColor(colors, off + i, c); }
+    } else {
+      c.copy(SHELL_COLORS[u.n]);
+      for (let i = 0; i < per; i++) writeColor(colors, off + i, c);
     }
     off += per;
   }
@@ -491,7 +500,7 @@ function updateInfo(): void {
     const outer = cfg.reduce((a, b) => (b.n > a.n ? b : a), cfg[0]);
     $('statename').textContent = elementName(Z);
     $('qn').textContent = `Z=${Z}  ·  ${cfg.length} occupied subshell${cfg.length > 1 ? 's' : ''}`;
-    $('statedesc').textContent = 'Neutral atom: each shell is a screened hydrogenic orbital (Slater). Filled shells are spherical.';
+    $('statedesc').textContent = 'Neutral atom: screened hydrogenic orbitals (Slater). Open shells show unpaired lobes (Hund\'s rule); filled shells are spherical.';
     addProp('Electrons', String(Z), exact ? 'EXACT' : 'APPROX');
     addProp('Configuration', cfg.map((s) => `${s.n}${'spdf'[s.l]}${sup(s.e)}`).join(' '), exact ? 'EXACT' : 'APPROX');
     const Ze = zeff(Z, outer.n, outer.l);

@@ -88,9 +88,10 @@ Most-probable radius and node radii are found by numeric scans (`mostProbableRad
 
 - **Hydrogen (Z = 1) is exact.** Everything else is a **Slater-screened
   hydrogenic** approximation — not a Hartree–Fock / DFT solution.
-- **Filled subshells are drawn spherically — which is exact.** Partially-filled
-  subshells are shown as their *spherical average* (Hund's-rule orientation is
-  not modelled).
+- **Filled and half-filled subshells are drawn spherically — which is exact**
+  (Σ_m |Y_lm|² is constant). **Open shells follow Hund's rule** (singly-occupied
+  m first), so e.g. carbon 2p² shows two lobes while nitrogen 2p³ is spherical.
+  (Which degenerate m are singly occupied is arbitrary; a canonical order is used.)
 - **Superposition** uses the first orbital's `Z_eff` for both states.
 - **Spectrum** uses hydrogenic `E_n` with the valence `Z_eff` and assumes the
   `Δl = ±1` selection rule. No fine structure, spin, or relativistic effects.

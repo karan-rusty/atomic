@@ -96,3 +96,29 @@ export function orbitalsForAtom(Z: number): Record<string, Orbital> {
   for (const s of electronConfig(Z)) Object.assign(map, subshellOrbitals(s.n, s.l));
   return map;
 }
+
+export interface AtomUnit {
+  n: number;
+  l: number;
+  m: number | null; // null = spherical (filled or half-filled shell)
+  ze: number;
+}
+
+function mOrder(l: number): number[] {
+  const out = [0];
+  for (let m = 1; m <= l; m++) out.push(m, -m);
+  return out;
+}
+
+// Occupied sampling units for an atom. Filled (or half-filled) shells are
+// spherical; open shells follow Hund's rule (singly-occupy m first), so e.g.
+// carbon 2p² shows two lobes and nitrogen 2p³ is spherical.
+export function atomUnits(Z: number): AtomUnit[] {
+  const units: AtomUnit[] = [];
+  for (const s of electronConfig(Z)) {
+    const ze = zeff(Z, s.n, s.l);
+    if (s.e >= 2 * s.l + 1) units.push({ n: s.n, l: s.l, m: null, ze });
+    else for (const m of mOrder(s.l).slice(0, s.e)) units.push({ n: s.n, l: s.l, m, ze });
+  }
+  return units;
+}
