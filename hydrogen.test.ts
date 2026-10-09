@@ -1,6 +1,6 @@
 // node hydrogen.test.ts — sanity-check the physics (Node strips the types).
 import assert from 'node:assert';
-import { radial, realY, sampleCloud } from './hydrogen.ts';
+import { mostProbableRadius, nodeRadii, radial, realY, sampleCloud } from './hydrogen.ts';
 
 // R_10(0) = 2 exactly.
 assert.ok(Math.abs(radial(1, 0, 0) - 2) < 1e-9, 'R_10(0) must be 2');
@@ -42,5 +42,10 @@ for (let i = 0; i < 200000; i++) {
 }
 const frac = nearEquator / 200000;
 assert.ok(frac < 0.05, `2p_z equator fraction = ${frac.toFixed(3)}, expected << 1`);
+
+// Derived quantities: 1s most-probable radius is a0; node counts match n-l-1.
+assert.ok(Math.abs(mostProbableRadius(1, 0, 1) - 1) < 0.02, '1s most probable radius ~ 1 a0');
+assert.strictEqual(nodeRadii(2, 0, 1).length, 1, '2s has 1 radial node');
+assert.strictEqual(nodeRadii(3, 0, 1).length, 2, '3s has 2 radial nodes');
 
 console.log(`hydrogen.ts OK — 1s <r> = ${mean.toFixed(4)} a0 (expected 1.5); 2p_z equator frac = ${frac.toFixed(4)}`);

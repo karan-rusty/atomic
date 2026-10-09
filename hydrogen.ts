@@ -156,6 +156,81 @@ export interface Orbital {
   m: number;
 }
 
+// Signed wavefunction psi_nlm at a world point (Z^{3/2} factor omitted; it is
+// constant for a given Z, so it cancels in densities and superpositions).
+export function psiAt(n: number, l: number, m: number, Z: number, x: number, y: number, z: number): number {
+  const r = Math.hypot(x, y, z);
+  if (r < 1e-12) return radial(n, l, 0) * realY(l, m, 0, 0);
+  return radial(n, l, Z * r) * realY(l, m, Math.acos(z / r), Math.atan2(y, x));
+}
+
+// Radius at which the radial density r^2 R(r)^2 peaks.
+export function mostProbableRadius(n: number, l: number, Z: number): number {
+  const rMax = (5 * n * n) / Z;
+  let best = 0;
+  let bestV = -1;
+  for (let i = 1; i <= 4000; i++) {
+    const r = (i / 4000) * rMax;
+    const v = r * r * radial(n, l, Z * r) ** 2;
+    if (v > bestV) {
+      bestV = v;
+      best = r;
+    }
+  }
+  return best;
+}
+
+// Radii of the radial nodes (zeros of R(r)) in (0, rMax].
+export function nodeRadii(n: number, l: number, Z: number): number[] {
+  const rMax = (5 * n * n) / Z;
+  const out: number[] = [];
+  let prev = radial(n, l, Z * (rMax / 4000)) > 0;
+  for (let i = 2; i <= 4000; i++) {
+    const r = (i / 4000) * rMax;
+    const cur = radial(n, l, Z * r) > 0;
+    if (cur !== prev) out.push(r);
+    prev = cur;
+  }
+  return out;
+}
+
+// Sample from |psi_a + psi_b|^2 (a two-orbital superposition) by importance
+// sampling: draw from either orbital, accept with |a+b|^2 / (2(|a|^2+|b|^2)).
+export function sampleSuperposition(a: Orbital, b: Orbital, count: number, Z: number): Cloud {
+  const pool = count * 4;
+  const A = sampleCloud(a.n, a.l, a.m, pool, Z);
+  const B = sampleCloud(b.n, b.l, b.m, pool, Z);
+  const positions = new Float32Array(count * 3);
+  const signs = new Int8Array(count);
+  let k = 0;
+  for (let i = 0; i < pool && k < count; i++) {
+    for (const src of [A, B]) {
+      const x = src.positions[3 * i], y = src.positions[3 * i + 1], z = src.positions[3 * i + 2];
+      const pa = psiAt(a.n, a.l, a.m, Z, x, y, z);
+      const pb = psiAt(b.n, b.l, b.m, Z, x, y, z);
+      const denom = pa * pa + pb * pb;
+      const acc = denom > 0 ? ((pa + pb) ** 2) / (2 * denom) : 0;
+      if (Math.random() < acc) {
+        positions[3 * k] = x;
+        positions[3 * k + 1] = y;
+        positions[3 * k + 2] = z;
+        signs[k] = pa + pb >= 0 ? 1 : -1;
+        k++;
+        if (k >= count) break;
+      }
+    }
+  }
+  // Fallback if too few accepted (very different orbitals): top up from A.
+  for (let i = 0; k < count && i < pool; i++) {
+    positions[3 * k] = A.positions[3 * i];
+    positions[3 * k + 1] = A.positions[3 * i + 1];
+    positions[3 * k + 2] = A.positions[3 * i + 2];
+    signs[k] = A.signs[i];
+    k++;
+  }
+  return { positions, signs };
+}
+
 const S: Record<string, string> = { '0': 's' };
 const P: Record<string, string> = { '0': 'p_z', '1': 'p_x', '-1': 'p_y' };
 const D: Record<string, string> = { '0': 'd_z2', '1': 'd_xz', '-1': 'd_yz', '2': 'd_x2-y2', '-2': 'd_xy' };
