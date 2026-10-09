@@ -22,18 +22,38 @@
     <div class="qn" id="qn">—</div>
     <div class="desc" id="statedesc">—</div>
     <div id="props"></div>
-    <div class="hist-wrap">
-      <div class="sect-label">RADIAL P(r) <span class="pill tag" id="histpill">EXACT</span></div>
-      <canvas id="hist" width="252" height="72"></canvas>
+
+    <div class="plot-wrap">
+      <div class="sect-label">RADIAL R(r) · P(r) <span class="pill tag" id="histpill">EXACT</span></div>
+      <canvas id="rplot" width="272" height="92"></canvas>
+    </div>
+
+    <div class="plot-wrap">
+      <div class="sect-label">ENERGY LEVELS <span class="pill tag" id="energypill">EXACT</span></div>
+      <canvas id="eladder" width="272" height="150"></canvas>
+    </div>
+
+    <div class="plot-wrap">
+      <div class="sect-label">EMISSION SPECTRUM <span class="pill tag">SCREENED</span></div>
+      <canvas id="spectrum" width="272" height="42"></canvas>
     </div>
   </aside>
 
   <main id="viewport">
     <div class="overlay tl" id="drawlabel">|ψ|² Monte-Carlo · 0 draws</div>
+
+    <div class="overlay tr">
+      <div class="mini-label">2D CROSS-SECTION · XZ</div>
+      <canvas id="xsec" width="150" height="150"></canvas>
+    </div>
+
+    <div id="axislabels"></div>
+
     <div class="overlay bl">
       <span class="pill vis">VISUAL LIBERTY</span>
       <span class="pill vis">MONTE-CARLO</span>
       <span class="annot" id="annot"></span>
+      <span class="scalebar" id="scalebar"></span>
     </div>
   </main>
 
@@ -41,6 +61,7 @@
     <section>
       <div class="sect-label">SYSTEM</div>
       <label class="row"><span>element</span><select id="element"></select></label>
+      <label class="row"><span>excited</span><input id="excited" type="checkbox" /></label>
     </section>
 
     <section>
@@ -54,15 +75,32 @@
     <section id="orbSection">
       <div class="sect-label">ORBITAL</div>
       <label class="row"><span>state</span><select id="orbital"></select></label>
+      <label class="row"><span>superpose</span><input id="superpose" type="checkbox" /></label>
+      <label class="row" id="orb2Row"><span>+ state</span><select id="orbital2"></select></label>
     </section>
 
     <section>
       <div class="sect-label">SAMPLING</div>
       <label class="row"><span>points</span><input id="points" type="range" min="10000" max="200000" step="10000" /></label>
-      <label class="row" id="phaseRow"><span>phase colour</span><input id="phase" type="checkbox" /></label>
+      <label class="row"><span>colour</span>
+        <select id="colour"><option>phase</option><option>shell</option><option>density</option></select>
+      </label>
       <label class="row"><span>auto-rotate</span><input id="rot" type="checkbox" /></label>
       <label class="row"><span>fit view</span><input id="fit" type="checkbox" /></label>
+      <label class="row"><span>measure</span><input id="measure" type="checkbox" /></label>
     </section>
+
+    <details class="physics">
+      <summary>Show the physics</summary>
+      <div class="phys-body">
+        <p>ψ<sub>nℓm</sub>(r,θ,φ) = R<sub>nℓ</sub>(r) · Y<sub>ℓm</sub>(θ,φ)</p>
+        <p>R<sub>nℓ</sub> via generalized Laguerre; Y<sub>ℓm</sub> via associated Legendre.</p>
+        <p>E<sub>n</sub> = −Z²/2n² Ha = −13.606 Z²/n² eV</p>
+        <p>⟨r⟩ = (3n² − ℓ(ℓ+1)) / 2Z · a₀</p>
+        <p>nodes: n−ℓ−1 radial, ℓ angular · |L| = √(ℓ(ℓ+1)) ℏ</p>
+        <p>Multi-electron atoms use Slater-screened hydrogenic shapes.</p>
+      </div>
+    </details>
 
     <div class="log" id="log">&gt; ready</div>
   </aside>
