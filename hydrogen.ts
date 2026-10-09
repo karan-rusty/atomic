@@ -1,15 +1,14 @@
-// hydrogen.js — hydrogen-like wavefunctions.
-// Atomic units: a0 = 1, Z = 1. Pure ESM with no browser deps, so the node
-// test can import it directly.
+// hydrogen.ts — hydrogen-like wavefunctions.
+// Atomic units: a0 = 1, Z = 1. No browser deps, so the node test can import it.
 
-const factCache = [1];
-function fact(k) {
+const factCache: number[] = [1];
+function fact(k: number): number {
   for (let i = factCache.length; i <= k; i++) factCache[i] = factCache[i - 1] * i;
   return factCache[k];
 }
 
 // Generalized Laguerre L_k^alpha(x) via the standard recurrence.
-function laguerre(k, alpha, x) {
+function laguerre(k: number, alpha: number, x: number): number {
   let prev = 1;
   if (k === 0) return prev;
   let curr = 1 + alpha - x;
@@ -22,14 +21,14 @@ function laguerre(k, alpha, x) {
 }
 
 // Radial wavefunction R_nl(r).
-export function radial(n, l, r) {
-  const rho = 2 * r / n;
-  const norm = Math.sqrt((2 / n) ** 3 * fact(n - l - 1) / (2 * n * fact(n + l)));
+export function radial(n: number, l: number, r: number): number {
+  const rho = (2 * r) / n;
+  const norm = Math.sqrt((2 / n) ** 3 * (fact(n - l - 1) / (2 * n * fact(n + l))));
   return norm * Math.exp(-r / n) * rho ** l * laguerre(n - l - 1, 2 * l + 1, rho);
 }
 
 // Associated Legendre P_l^m(x), x = cos(theta), via recurrence.
-function plm(l, m, x) {
+function plm(l: number, m: number, x: number): number {
   let pmm = 1;
   if (m > 0) {
     const somx2 = Math.sqrt((1 - x) * (1 + x));
@@ -52,18 +51,23 @@ function plm(l, m, x) {
 }
 
 // Real spherical harmonic Y_lm(theta, phi).
-export function realY(l, m, theta, phi) {
+export function realY(l: number, m: number, theta: number, phi: number): number {
   const am = Math.abs(m);
-  const norm = Math.sqrt((2 * l + 1) / (4 * Math.PI) * fact(l - am) / fact(l + am));
+  const norm = Math.sqrt(((2 * l + 1) / (4 * Math.PI)) * (fact(l - am) / fact(l + am)));
   const p = plm(l, am, Math.cos(theta));
   if (m === 0) return norm * p;
   const ang = norm * Math.SQRT2 * p; // sqrt(2) folds the +/-m normalization
   return m > 0 ? ang * Math.cos(m * phi) : ang * Math.sin(am * phi);
 }
 
+export interface Cloud {
+  positions: Float32Array;
+  signs: Int8Array;
+}
+
 // Sample `count` electron positions from |psi_nlm|^2.
 // Returns Cartesian positions and the sign of psi at each point (for phase color).
-export function sampleCloud(n, l, m, count) {
+export function sampleCloud(n: number, l: number, m: number, count: number): Cloud {
   const rMax = Math.max(10, 5 * n * n);
 
   // Peak of the radial density P(r) = r^2 R(r)^2, from a fine grid.
@@ -92,12 +96,12 @@ export function sampleCloud(n, l, m, count) {
   for (let k = 0; k < count; k++) {
     // Radii and angles are independent in |psi|^2, so sample each from its
     // own marginal by rejection.
-    let r;
+    let r: number;
     for (;;) {
       r = Math.random() * rMax;
       if (Math.random() * pmax < r * r * radial(n, l, r) ** 2) break;
     }
-    let theta, phi, yv;
+    let theta: number, phi: number, yv: number;
     for (;;) {
       theta = Math.acos(2 * Math.random() - 1); // uniform in cos(theta)
       phi = Math.random() * 2 * Math.PI;
@@ -115,18 +119,24 @@ export function sampleCloud(n, l, m, count) {
   return { positions, signs };
 }
 
-const S = { 0: 's' };
-const P = { 0: 'p_z', 1: 'p_x', '-1': 'p_y' };
-const D = { 0: 'd_z2', 1: 'd_xz', '-1': 'd_yz', 2: 'd_x2-y2', '-2': 'd_xy' };
-const F = {
-  0: 'f_z3', 1: 'f_xz2', '-1': 'f_yz2', 2: 'f_z(x2-y2)',
-  '-2': 'f_xyz', 3: 'f_x(x2-3y2)', '-3': 'f_y(3x2-y2)',
+export interface Orbital {
+  n: number;
+  l: number;
+  m: number;
+}
+
+const S: Record<string, string> = { '0': 's' };
+const P: Record<string, string> = { '0': 'p_z', '1': 'p_x', '-1': 'p_y' };
+const D: Record<string, string> = { '0': 'd_z2', '1': 'd_xz', '-1': 'd_yz', '2': 'd_x2-y2', '-2': 'd_xy' };
+const F: Record<string, string> = {
+  '0': 'f_z3', '1': 'f_xz2', '-1': 'f_yz2', '2': 'f_z(x2-y2)',
+  '-2': 'f_xyz', '3': 'f_x(x2-3y2)', '-3': 'f_y(3x2-y2)',
 };
 
 // Display name -> { n, l, m } for n = 1..4.
-export const ORBITALS = (() => {
+export const ORBITALS: Record<string, Orbital> = (() => {
   const byL = [S, P, D, F];
-  const map = {};
+  const map: Record<string, Orbital> = {};
   for (let n = 1; n <= 4; n++) {
     for (let l = 0; l < n; l++) {
       for (const mKey in byL[l]) {

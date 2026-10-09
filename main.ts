@@ -1,8 +1,8 @@
-// main.js — three.js point-cloud renderer + lil-gui controls.
+// main.ts — three.js point-cloud renderer + lil-gui controls.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import GUI from 'lil-gui';
-import { ORBITALS, sampleCloud } from './hydrogen.js';
+import { ORBITALS, sampleCloud } from './hydrogen.ts';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 5000);
@@ -21,7 +21,7 @@ controls.autoRotateSpeed = 1.2;
 const sprite = (() => {
   const c = document.createElement('canvas');
   c.width = c.height = 64;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d')!;
   const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
   g.addColorStop(0, 'rgba(255,255,255,1)');
   g.addColorStop(1, 'rgba(255,255,255,0)');
@@ -52,9 +52,9 @@ const material = new THREE.PointsMaterial({
   sizeAttenuation: true,
 });
 
-let points = null;
+let points: THREE.Points | null = null;
 
-function rebuild(reframe) {
+function rebuild(reframe: boolean): void {
   const { n, l, m } = ORBITALS[params.orbital];
   const { positions, signs } = sampleCloud(n, l, m, params.density);
 
@@ -90,9 +90,9 @@ function rebuild(reframe) {
 const gui = new GUI();
 gui.add(params, 'orbital', Object.keys(ORBITALS)).onChange(() => rebuild(true));
 gui.add(params, 'density', 10000, 1000000, 10000).onFinishChange(() => rebuild(false));
-gui.add(params, 'pointSize', 0.02, 0.5, 0.01).onChange((v) => (material.size = v));
+gui.add(params, 'pointSize', 0.02, 0.5, 0.01).onChange((v: number) => (material.size = v));
 gui.add(params, 'phaseColor').onChange(() => rebuild(false));
-gui.add(params, 'autoRotate').onChange((v) => (controls.autoRotate = v));
+gui.add(params, 'autoRotate').onChange((v: boolean) => (controls.autoRotate = v));
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;

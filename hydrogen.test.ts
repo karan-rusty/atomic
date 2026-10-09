@@ -1,6 +1,6 @@
-// node hydrogen.test.mjs — sanity-check the physics.
+// node hydrogen.test.ts — sanity-check the physics (Node strips the types).
 import assert from 'node:assert';
-import { radial, realY, sampleCloud } from './hydrogen.js';
+import { radial, realY, sampleCloud } from './hydrogen.ts';
 
 // R_10(0) = 2 exactly.
 assert.ok(Math.abs(radial(1, 0, 0) - 2) < 1e-9, 'R_10(0) must be 2');
@@ -43,4 +43,4 @@ for (let i = 0; i < 200000; i++) {
 const frac = nearEquator / 200000;
 assert.ok(frac < 0.05, `2p_z equator fraction = ${frac.toFixed(3)}, expected << 1`);
 
-console.log(`hydrogen.js OK — 1s <r> = ${mean.toFixed(4)} a0 (expected 1.5); 2p_z equator frac = ${frac.toFixed(4)}`);
+console.log(`hydrogen.ts OK — 1s <r> = ${mean.toFixed(4)} a0 (expected 1.5); 2p_z equator frac = ${frac.toFixed(4)}`);
