@@ -78,9 +78,10 @@ const params = {
   density: 100000,
   phaseColor: true,
   autoRotate: true,
+  fitView: true,
 };
 
-const POINT_SCALE = 0.012; // point size as a fraction of the cloud radius
+const POINT_SCALE = 0.008; // point size as a fraction of the cloud radius
 
 const material = new THREE.PointsMaterial({
   size: 1, // overwritten per rebuild; scaled to the cloud so tiny clouds don't blob
@@ -164,18 +165,28 @@ function rebuild(): void {
   lastCount = count;
   lastRadius = percentileRadius(positions, count, 0.98);
 
-  // Camera is fixed, so point size adapts: proportional to the cloud, clamped
-  // to a 2-8 px band at the fixed distance so dots never vanish or blob out.
   updatePointSize();
   axes.scale.setScalar(lastRadius * 1.15);
   nucleus.scale.setScalar(lastRadius * 0.012);
   updateInfo();
 }
 
+// Fit the camera to the cloud (unless the user wants true relative sizes).
+function frameCloud(): void {
+  if (!params.fitView) return;
+  const d = Math.max(3 * lastRadius, 2);
+  camera.position.set(0.7, 0.45, 0.9).normalize().multiplyScalar(d);
+  controls.target.set(0, 0, 0);
+  updatePointSize();
+}
+
+// Point size follows the current camera distance and the cloud radius, clamped
+// to a 1.5-8 px band so dots never vanish or blob out.
 function updatePointSize(): void {
+  const dist = camera.position.distanceTo(controls.target) || CAM_DIST;
   const worldPerPixel =
-    (2 * CAM_DIST * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) / viewport.clientHeight;
-  material.size = Math.min(8 * worldPerPixel, Math.max(2 * worldPerPixel, lastRadius * POINT_SCALE));
+    (2 * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) / viewport.clientHeight;
+  material.size = Math.min(8 * worldPerPixel, Math.max(1.5 * worldPerPixel, lastRadius * POINT_SCALE));
 }
 
 const sup = (n: number) => String(n).replace(/[0-9]/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[+d]);
@@ -301,6 +312,7 @@ elementSel.addEventListener('change', () => {
   params.element = elementSel.value;
   updateOrbitals();
   rebuild();
+  frameCloud();
 });
 
 for (const b of document.querySelectorAll<HTMLButtonElement>('#view button')) {
@@ -308,6 +320,7 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('#view button')) {
     params.view = b.dataset.v as 'atom' | 'orbital';
     syncView();
     rebuild();
+    frameCloud();
   });
 }
 
@@ -315,6 +328,7 @@ const orbSel = $<HTMLSelectElement>('orbital');
 orbSel.addEventListener('change', () => {
   params.orbital = orbSel.value;
   rebuild();
+  frameCloud();
 });
 
 const pointsInput = $<HTMLInputElement>('points');
@@ -338,6 +352,14 @@ rotInput.addEventListener('change', () => {
   controls.autoRotate = rotInput.checked;
 });
 
+const fitInput = $<HTMLInputElement>('fit');
+fitInput.checked = params.fitView;
+fitInput.addEventListener('change', () => {
+  params.fitView = fitInput.checked;
+  if (params.fitView) frameCloud();
+  else updatePointSize();
+});
+
 addEventListener('resize', () => {
   const w = viewport.clientWidth, h = viewport.clientHeight;
   camera.aspect = w / h;
@@ -352,6 +374,7 @@ camera.aspect = viewport.clientWidth / viewport.clientHeight;
 camera.updateProjectionMatrix();
 
 rebuild();
+frameCloud();
 
 let frames = 0;
 let t0 = performance.now();
