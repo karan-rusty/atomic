@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quantum Atom — orbital clouds</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #05060a; overflow: hidden; }
+    canvas { display: block; }
+    #caption {
+      position: fixed; left: 12px; bottom: 12px; max-width: 44ch;
+      font: 12px/1.45 system-ui, sans-serif; color: #9fb2c8;
+      background: rgba(8,12,20,.62); padding: 8px 10px; border-radius: 8px;
+      border: 1px solid rgba(120,150,200,.15);
+    }
+    #caption b { color: #d7e3f2; }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+      "lil-gui": "https://unpkg.com/lil-gui@0.19/dist/lil-gui.esm.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="caption">
+    <b>Hydrogen-like orbital · |ψ|² sampled</b><br />
+    Dense = more likely, sparse = less. No orbits — this is a probability cloud.
+    Phase: <span style="color:#ff5a00">+ψ</span> /
+    <span style="color:#00a6ff">−ψ</span>.
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
