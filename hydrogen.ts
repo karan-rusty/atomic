@@ -164,16 +164,12 @@ const F: Record<string, string> = {
   '-2': 'f_xyz', '3': 'f_x(x2-3y2)', '-3': 'f_y(3x2-y2)',
 };
 
-// Display name -> { n, l, m } for n = 1..6, l <= 3 (s..f).
-export const ORBITALS: Record<string, Orbital> = (() => {
+// Named orbitals of a single subshell (all m), e.g. (2,1) -> 2p_z, 2p_x, 2p_y.
+export function subshellOrbitals(n: number, l: number): Record<string, Orbital> {
   const byL = [S, P, D, F];
   const map: Record<string, Orbital> = {};
-  for (let n = 1; n <= 6; n++) {
-    for (let l = 0; l < Math.min(n, 4); l++) {
-      for (const mKey in byL[l]) {
-        map[`${n}${byL[l][mKey]}`] = { n, l, m: Number(mKey) };
-      }
-    }
+  if (l < byL.length) {
+    for (const mKey in byL[l]) map[`${n}${byL[l][mKey]}`] = { n, l, m: Number(mKey) };
   }
   return map;
-})();
+}

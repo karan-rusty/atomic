@@ -2,8 +2,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import GUI from 'lil-gui';
-import { ORBITALS, sampleCloud, sampleShell } from './hydrogen.ts';
-import { SYMBOLS, electronConfig, zeff } from './atoms.ts';
+import { sampleCloud, sampleShell } from './hydrogen.ts';
+import { SYMBOLS, electronConfig, zeff, orbitalsForAtom } from './atoms.ts';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 5000);
@@ -71,6 +71,9 @@ let points: THREE.Points | null = null;
 
 const Z_of = (symbol: string) => SYMBOLS.indexOf(symbol) + 1;
 
+// Orbitals available for the selected atom (only those it actually has).
+let atomOrbitals = orbitalsForAtom(Z_of(params.element));
+
 // 98th-percentile radius, so the camera frames the cloud regardless of Z.
 function percentileRadius(pos: Float32Array, count: number, p: number): number {
   const stride = Math.max(1, Math.floor(count / 10000));
@@ -106,7 +109,7 @@ function buildAtomCloud(Z: number): { positions: Float32Array; colors: Float32Ar
 }
 
 function buildOrbitalCloud(Z: number): { positions: Float32Array; colors: Float32Array; count: number } {
-  const { n, l, m } = ORBITALS[params.orbital];
+  const { n, l, m } = atomOrbitals[params.orbital];
   const { positions, signs } = sampleCloud(n, l, m, params.density, zeff(Z, n, l));
   const colors = new Float32Array(signs.length * 3);
   const c = new THREE.Color();
@@ -144,9 +147,21 @@ function rebuild(reframe: boolean): void {
 }
 
 const gui = new GUI();
-gui.add(params, 'element', SYMBOLS).onChange(() => rebuild(true));
+gui.add(params, 'element', SYMBOLS).onChange(() => {
+  updateOrbitals();
+  rebuild(true);
+});
 gui.add(params, 'view', ['atom', 'orbital']).name('view').onChange(syncView);
-const orbCtrl = gui.add(params, 'orbital', Object.keys(ORBITALS)).onChange(() => rebuild(true));
+const orbCtrl = gui.add(params, 'orbital', Object.keys(atomOrbitals)).onChange(() => rebuild(true));
+
+// Refresh the orbital list when the element changes, keeping a valid selection.
+function updateOrbitals(): void {
+  atomOrbitals = orbitalsForAtom(Z_of(params.element));
+  const names = Object.keys(atomOrbitals);
+  if (!names.includes(params.orbital)) params.orbital = names[0];
+  orbCtrl.options(names);
+  orbCtrl.setValue(params.orbital);
+}
 gui.add(params, 'density', 10000, 1000000, 10000).name('points').onFinishChange(() => rebuild(false));
 gui.add(params, 'pointSize', 0.02, 0.5, 0.01).onChange((v: number) => (material.size = v));
 const phaseCtrl = gui.add(params, 'phaseColor').onChange(() => rebuild(false));
@@ -169,6 +184,7 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 
+updateOrbitals();
 syncView();
 renderer.setAnimationLoop(() => {
   controls.update();

@@ -2,6 +2,8 @@
 // Multi-electron atoms have no closed-form wavefunction; we approximate each
 // occupied subshell as a hydrogenic orbital screened by the other electrons.
 
+import { subshellOrbitals, type Orbital } from './hydrogen.ts';
+
 export const SYMBOLS = [
   'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na', 'Mg', 'Al', 'Si',
   'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co',
@@ -75,4 +77,11 @@ export function zeff(Z: number, n: number, l: number): number {
     }
   }
   return Math.max(Z - shielded, 0.1);
+}
+
+// The orbitals that actually exist in the neutral atom's ground configuration.
+export function orbitalsForAtom(Z: number): Record<string, Orbital> {
+  const map: Record<string, Orbital> = {};
+  for (const s of electronConfig(Z)) Object.assign(map, subshellOrbitals(s.n, s.l));
+  return map;
 }

@@ -1,6 +1,6 @@
 // node atoms.test.ts — check electron config + Slater effective charges.
 import assert from 'node:assert';
-import { electronConfig, zeff, SYMBOLS } from './atoms.ts';
+import { electronConfig, zeff, SYMBOLS, orbitalsForAtom } from './atoms.ts';
 
 // Config fills exactly Z electrons.
 for (const Z of [1, 6, 11, 18, 26, 36]) {
@@ -23,5 +23,11 @@ assert.ok(Math.abs(zeff(21, 3, 2) - 3.0) < 1e-9, `Sc 3d Zeff = ${zeff(21, 3, 2)}
 // Hydrogen is bare.
 assert.strictEqual(zeff(1, 1, 0), 1);
 assert.strictEqual(SYMBOLS.length, 36);
+
+// Only orbitals that exist in the atom's configuration are offered.
+assert.deepStrictEqual(Object.keys(orbitalsForAtom(1)), ['1s'], 'H has only 1s');
+const cOrb = Object.keys(orbitalsForAtom(6));
+assert.ok(cOrb.includes('2p_x'), `C should have 2p_x, got ${cOrb.join(',')}`);
+assert.ok(!cOrb.includes('3d_xy'), `C must not have 3d_xy, got ${cOrb.join(',')}`);
 
 console.log('atoms.ts OK — config + Slater Zeff values verified');
