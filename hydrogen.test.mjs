@@ -31,4 +31,16 @@ for (let i = 0; i < N; i++) {
 const mean = sum / N;
 assert.ok(Math.abs(mean - 1.5) < 0.03, `1s <r> = ${mean.toFixed(3)}, expected ~1.5`);
 
-console.log(`hydrogen.js OK — 1s <r> = ${mean.toFixed(4)} a0 (expected 1.5)`);
+// 2p_z angular node: |psi|^2 ~ cos^2(theta) vanishes at the equator, so very
+// few sampled points should sit near cos(theta) ~ 0.
+const pz = sampleCloud(2, 1, 0, 200000).positions;
+let nearEquator = 0;
+for (let i = 0; i < 200000; i++) {
+  const z = pz[3 * i + 2];
+  const r = Math.hypot(pz[3 * i], pz[3 * i + 1], z);
+  if (Math.abs(z / r) < 0.15) nearEquator++;
+}
+const frac = nearEquator / 200000;
+assert.ok(frac < 0.05, `2p_z equator fraction = ${frac.toFixed(3)}, expected << 1`);
+
+console.log(`hydrogen.js OK — 1s <r> = ${mean.toFixed(4)} a0 (expected 1.5); 2p_z equator frac = ${frac.toFixed(4)}`);
