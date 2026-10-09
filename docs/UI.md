@@ -40,6 +40,7 @@ Everything is declared in `index.html`; `main.ts` looks elements up by id.
 | `eladder` | canvas: energy-level ladder |
 | `energypill` | tag for the ladder |
 | `spectrum` | canvas: emission spectrum |
+| `gallery` | grid of clickable orbital thumbnails |
 
 ### Viewport (`#viewport`)
 | id / class | meaning |

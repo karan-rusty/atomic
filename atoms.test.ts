@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { atomUnits, electronConfig, zeff, SYMBOLS, orbitalsForAtom } from './atoms.ts';
 
 // Config fills exactly Z electrons.
-for (const Z of [1, 6, 11, 18, 26, 36]) {
+for (const Z of [1, 6, 11, 18, 26, 36, 54, 86, 118]) {
   const total = electronConfig(Z).reduce((s, x) => s + x.e, 0);
   assert.strictEqual(total, Z, `config of Z=${Z} must sum to ${Z}`);
 }
@@ -22,7 +22,7 @@ assert.ok(Math.abs(zeff(21, 3, 2) - 3.0) < 1e-9, `Sc 3d Zeff = ${zeff(21, 3, 2)}
 
 // Hydrogen is bare.
 assert.strictEqual(zeff(1, 1, 0), 1);
-assert.strictEqual(SYMBOLS.length, 36);
+assert.strictEqual(SYMBOLS.length, 118);
 
 // Only orbitals that exist in the atom's configuration are offered.
 assert.deepStrictEqual(Object.keys(orbitalsForAtom(1)), ['1s'], 'H has only 1s');

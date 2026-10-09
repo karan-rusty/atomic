@@ -81,6 +81,14 @@ aside {
 .plot-wrap { margin-top: 4px; display: flex; flex-direction: column; gap: 6px; }
 .plot-wrap canvas { width: 100%; display: block; }
 
+.gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.gallery canvas {
+  width: 100%; aspect-ratio: 1; display: block; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 3px; background: #07090b;
+}
+.gallery canvas:hover { border-color: var(--border-hi); }
+.gallery canvas.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-line); }
+
 /* ---------- viewport ---------- */
 #viewport { position: relative; overflow: hidden; background: radial-gradient(circle at 50% 45%, #0c1114, #070a0c 70%); }
 #viewport canvas { display: block; }

@@ -2,7 +2,7 @@
 
 **AtomSim** — an interactive 3D simulator of **real quantum electron clouds**
 (`|ψ|²` sampled as a point cloud) for hydrogen-like orbitals and neutral atoms
-(H–Kr). Vanilla TypeScript + three.js + Vite. No framework, no backend.
+(all 118 elements). Vanilla TypeScript + three.js + Vite. No framework, no backend.
 
 > Read this file and `soul.md`. You should not need to read the source to start.
 > Deeper detail lives in `docs/`.
@@ -28,7 +28,7 @@ Always run `npm run typecheck` and `npm test` after a change. They are fast.
 | `main.ts` | Everything else: three.js scene, sampling orchestration, all panels, plots, wiring. **The big file.** |
 | `sampler.worker.ts` | Runs `|ψ|²` sampling off the main thread; imports `hydrogen.ts`. |
 | `hydrogen.ts` | Pure physics (no DOM/three). Wavefunctions + samplers. Testable in Node. |
-| `atoms.ts` | Elements H–Kr: electron configuration, Slater effective charge. Depends on `hydrogen.ts`. |
+| `atoms.ts` | Elements H–Og (118): electron configuration, Slater effective charge. Depends on `hydrogen.ts`. |
 | `hydrogen.test.ts` | Physics assertions (radial, angular, sampling). |
 | `atoms.test.ts` | Config + Slater `Z_eff` assertions. |
 | `tsconfig.json` / `vite-env.d.ts` / `package.json` | Tooling. |

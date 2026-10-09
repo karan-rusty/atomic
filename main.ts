@@ -450,6 +450,55 @@ function drawCrossSection(): void {
   ctx.putImageData(img, 0, 0);
 }
 
+function drawMini(cv: HTMLCanvasElement, orb: Orbital, Z: number): void {
+  const ctx = cv.getContext('2d')!;
+  const N = cv.width;
+  const img = ctx.createImageData(N, N);
+  const ze = zeff(Z, orb.n, orb.l);
+  const R = (3 * orb.n * orb.n) / ze;
+  const c = new THREE.Color();
+  let max = 1e-30;
+  const vals = new Float32Array(N * N);
+  for (let j = 0; j < N; j++) {
+    for (let i = 0; i < N; i++) {
+      const x = ((i / (N - 1)) * 2 - 1) * R;
+      const z = (1 - (j / (N - 1)) * 2) * R;
+      const v = psiAt(orb.n, orb.l, orb.m, ze, x, 0, z);
+      vals[j * N + i] = v * v;
+      if (v * v > max) max = v * v;
+    }
+  }
+  for (let k = 0; k < N * N; k++) {
+    densityColor(Math.sqrt(vals[k] / max), c);
+    img.data[4 * k] = c.r * 255;
+    img.data[4 * k + 1] = c.g * 255;
+    img.data[4 * k + 2] = c.b * 255;
+    img.data[4 * k + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function highlightGallery(): void {
+  for (const cv of document.querySelectorAll<HTMLCanvasElement>('#gallery canvas'))
+    cv.classList.toggle('active', params.view === 'orbital' && cv.dataset.orb === params.orbital);
+}
+
+function buildGallery(): void {
+  const g = $('gallery');
+  g.innerHTML = '';
+  const Z = currentZ();
+  for (const name of Object.keys(atomOrbitals)) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 44;
+    cv.title = name;
+    cv.dataset.orb = name;
+    drawMini(cv, atomOrbitals[name], Z);
+    cv.addEventListener('click', () => { if (params.view !== 'orbital') setView('orbital'); setOrbital(name); });
+    g.appendChild(cv);
+  }
+  highlightGallery();
+}
+
 function updateInfo(): void {
   const Z = currentZ();
   const sym = params.element;
@@ -607,6 +656,7 @@ function updateOrbitals(): void {
   if (!names.includes(params.orbital2)) params.orbital2 = names[Math.min(1, names.length - 1)];
   fillSelect($<HTMLSelectElement>('orbital'), names, params.orbital);
   fillSelect($<HTMLSelectElement>('orbital2'), names, params.orbital2);
+  buildGallery();
 }
 
 function syncView(): void {
@@ -638,8 +688,8 @@ const measureInput = $<HTMLInputElement>('measure');
 // --- actions (shared by controls and keyboard) ---
 function setElement(sym: string): void { params.element = sym; elementSel.value = sym; updateOrbitals(); update(true); }
 function stepElement(d: number): void { const i = SYMBOLS.indexOf(params.element); setElement(SYMBOLS[(i + d + SYMBOLS.length) % SYMBOLS.length]); }
-function setView(v: 'atom' | 'orbital'): void { params.view = v; syncView(); update(true); }
-function setOrbital(name: string): void { params.orbital = name; orbitalSel.value = name; update(true); }
+function setView(v: 'atom' | 'orbital'): void { params.view = v; syncView(); highlightGallery(); update(true); }
+function setOrbital(name: string): void { params.orbital = name; orbitalSel.value = name; highlightGallery(); update(true); }
 function setSuperpose(v: boolean): void { params.superpose = v; superposeInput.checked = v; syncView(); update(true); }
 function setExcited(v: boolean): void { params.excited = v; excitedInput.checked = v; updateOrbitals(); update(true); }
 function setColour(mode: typeof params.colour): void { params.colour = mode; colourSel.value = mode; update(false); }

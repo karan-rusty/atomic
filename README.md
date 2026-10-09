@@ -10,8 +10,8 @@ wavefunction phase (+ψ / −ψ), the shell, or the density.
 
 ## Features
 
-- **Real sampled `|ψ|²`** for hydrogen-like orbitals (`1s … 6f`) and neutral
-  atoms **H–Kr** (Slater-screened hydrogenic shapes).
+- **Real sampled `|ψ|²`** for hydrogen-like orbitals (`1s … 7p`) and neutral
+  atoms (all 118 elements, Slater-screened hydrogenic shapes).
 - **Atom view** (all occupied shells) and **orbital view** (a single state),
   including an **excited-state** toggle.
 - **Superposition** of two orbitals — see where they reinforce and cancel.
