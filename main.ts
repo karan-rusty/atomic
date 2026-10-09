@@ -220,6 +220,7 @@ function updateInfo(): void {
   $('exactpill').textContent = exact ? 'EXACT' : 'SCREENED';
   $('drawcount').textContent = `${lastCount.toLocaleString()} draws`;
   $('drawlabel').textContent = `|ψ|² Monte-Carlo · ${lastCount.toLocaleString()} draws`;
+  $('log').textContent = `> ${lastCount.toLocaleString()} points drawn`;
   $('props').innerHTML = '';
 
   if (params.view === 'orbital') {
@@ -282,8 +283,6 @@ function syncView(): void {
   $('phaseRow').classList.toggle('hidden', params.view !== 'orbital');
 }
 
-const log = (msg: string) => ($('log').textContent = `> ${msg}`);
-
 fillSelect($<HTMLSelectElement>('element'), SYMBOLS, params.element);
 updateOrbitals();
 syncView();
@@ -292,7 +291,6 @@ const elementSel = $<HTMLSelectElement>('element');
 elementSel.addEventListener('change', () => {
   params.element = elementSel.value;
   updateOrbitals();
-  log(`${elementName(Z_of(params.element))} selected`);
   rebuild(true);
 });
 
@@ -336,11 +334,6 @@ rotInput.checked = params.autoRotate;
 controls.autoRotate = params.autoRotate;
 rotInput.addEventListener('change', () => {
   controls.autoRotate = rotInput.checked;
-});
-
-$('resample').addEventListener('click', () => {
-  rebuild(false);
-  log(`${lastCount.toLocaleString()} points drawn`);
 });
 
 addEventListener('resize', () => {

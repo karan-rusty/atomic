@@ -113,14 +113,6 @@ input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px;
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
-.execute {
-  background: linear-gradient(180deg, #ff74ab, var(--accent)); color: #1a0810;
-  border: none; border-radius: 4px; padding: 12px; font-family: var(--mono);
-  font-size: 12px; font-weight: 700; letter-spacing: 1px; cursor: pointer;
-  text-transform: uppercase;
-}
-.execute:hover { filter: brightness(1.08); }
-
 .log { color: var(--dim); font-size: 11px; border-top: 1px solid var(--border); padding-top: 8px; }
 
 .hidden { display: none !important; }
