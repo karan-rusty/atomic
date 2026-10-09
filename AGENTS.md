@@ -26,6 +26,7 @@ Always run `npm run typecheck` and `npm test` after a change. They are fast.
 | `index.html` | The whole UI shell: 4 regions (topbar / left panel / viewport / right panel). All DOM ids live here. |
 | `style.css` | Dark monospace "instrument" theme. Pink accent via `--accent`. |
 | `main.ts` | Everything else: three.js scene, sampling orchestration, all panels, plots, wiring. **The big file.** |
+| `sampler.worker.ts` | Runs `|ψ|²` sampling off the main thread; imports `hydrogen.ts`. |
 | `hydrogen.ts` | Pure physics (no DOM/three). Wavefunctions + samplers. Testable in Node. |
 | `atoms.ts` | Elements H–Kr: electron configuration, Slater effective charge. Depends on `hydrogen.ts`. |
 | `hydrogen.test.ts` | Physics assertions (radial, angular, sampling). |
@@ -35,7 +36,7 @@ Always run `npm run typecheck` and `npm test` after a change. They are fast.
 ## Architecture in 5 lines
 
 1. UI lives in `index.html`; `main.ts` wires listeners to ids and holds all state in `params`.
-2. `rebuild()` samples the current state → `BufferGeometry` → `THREE.Points`.
+2. `rebuild()` requests samples from `sampler.worker.ts` → `BufferGeometry` → `THREE.Points`.
 3. Sampling is in `hydrogen.ts`: `sampleCloud` (single orbital), `sampleShell`
    (filled shell), `sampleSuperposition` (two orbitals).
 4. `atoms.ts` gives each element its configuration + per-subshell `Z_eff`, so

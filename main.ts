@@ -10,7 +10,7 @@ import {
   mostProbableRadius, nodeRadii, psiAt, radial,
   sampleCloud, sampleShell, sampleSuperposition, subshellOrbitals, type Orbital,
 } from './hydrogen.ts';
-import { SYMBOLS, electronConfig, elementName, orbitalsForAtom, atomUnits, zeff, type AtomUnit } from './atoms.ts';
+import { SYMBOLS, electronConfig, elementName, orbitalsForAtom, atomUnits, zeff } from './atoms.ts';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -180,75 +180,61 @@ function currentDensity(x: number, y: number, z: number): number {
   return v * v;
 }
 
-function buildAtomCloud(Z: number): { positions: Float32Array; colors: Float32Array; count: number } {
-  const units = atomUnits(Z);
-  const per = Math.max(1000, Math.floor(params.density / units.length));
-  const count = per * units.length;
-  const positions = new Float32Array(count * 3);
-  const colors = new Float32Array(count * 3);
-  const c = new THREE.Color();
-  const val = (u: AtomUnit, x: number, y: number, z: number): number => {
-    if (u.m === null) {
-      const r = Math.hypot(x, y, z);
-      return radial(u.n, u.l, u.ze * r) ** 2 * r * r;
-    }
-    return psiAt(u.n, u.l, u.m, u.ze, x, y, z) ** 2;
-  };
-
-  let off = 0;
-  for (const u of units) {
-    const chunk = u.m === null ? sampleShell(u.n, u.l, u.ze, per) : sampleCloud(u.n, u.l, u.m, per, u.ze).positions;
-    positions.set(chunk, off * 3);
-
-    if (params.colour === 'density') {
-      const vals = new Float32Array(per);
-      let max = 1e-30;
-      for (let i = 0; i < per; i++) {
-        const v = val(u, chunk[3 * i], chunk[3 * i + 1], chunk[3 * i + 2]);
-        vals[i] = v;
-        if (v > max) max = v;
-      }
-      for (let i = 0; i < per; i++) { densityColor(Math.sqrt(vals[i] / max), c); writeColor(colors, off + i, c); }
-    } else {
-      c.copy(SHELL_COLORS[u.n]);
-      for (let i = 0; i < per; i++) writeColor(colors, off + i, c);
-    }
-    off += per;
-  }
-  return { positions, colors, count };
+interface SampleResult {
+  id: number;
+  positions: Float32Array;
+  dens: Float32Array;
+  signs: Int8Array | null;
+  shells: Uint8Array | null;
+  count: number;
 }
 
-function buildOrbitalCloud(): { positions: Float32Array; colors: Float32Array; count: number } {
-  const A = curA(), B = curB(), Zs = curZeff();
-  const { positions, signs } = B
-    ? sampleSuperposition(A, B, params.density, Zs)
-    : sampleCloud(A.n, A.l, A.m, params.density, Zs);
-  const count = signs.length;
+const worker = new Worker(new URL('./sampler.worker.ts', import.meta.url), { type: 'module' });
+let reqId = 0;
+const pending = new Map<number, (r: SampleResult) => void>();
+worker.onmessage = (e: MessageEvent<SampleResult>) => {
+  const resolve = pending.get(e.data.id);
+  if (resolve) { pending.delete(e.data.id); resolve(e.data); }
+};
+function requestSample(req: Record<string, unknown>): Promise<SampleResult> {
+  const id = ++reqId;
+  return new Promise((resolve) => {
+    pending.set(id, resolve);
+    worker.postMessage({ ...req, id });
+  });
+}
+
+function colorFor(count: number, dens: Float32Array, signs: Int8Array | null, shells: Uint8Array | null, shellN: number): Float32Array {
   const colors = new Float32Array(count * 3);
   const c = new THREE.Color();
-
   if (params.colour === 'density') {
-    const vals = new Float32Array(count);
-    let max = 1e-30;
-    for (let i = 0; i < count; i++) {
-      const v = currentPsi(positions[3 * i], positions[3 * i + 1], positions[3 * i + 2]);
-      vals[i] = v * v;
-      if (vals[i] > max) max = vals[i];
-    }
-    for (let i = 0; i < count; i++) { densityColor(Math.sqrt(vals[i] / max), c); writeColor(colors, i, c); }
-  } else if (params.colour === 'shell') {
-    c.copy(SHELL_COLORS[A.n]);
-    for (let i = 0; i < count; i++) writeColor(colors, i, c);
+    for (let i = 0; i < count; i++) { densityColor(dens[i], c); writeColor(colors, i, c); }
+  } else if (params.colour === 'shell' || !signs) {
+    if (shells) for (let i = 0; i < count; i++) { c.copy(SHELL_COLORS[shells[i]]); writeColor(colors, i, c); }
+    else { c.copy(SHELL_COLORS[shellN]); for (let i = 0; i < count; i++) writeColor(colors, i, c); }
   } else {
     for (let i = 0; i < count; i++) { c.copy(signs[i] > 0 ? POS : NEG); writeColor(colors, i, c); }
   }
-  return { positions, colors, count };
+  return colors;
 }
 
-function rebuild(): void {
+async function rebuild(): Promise<void> {
   const Z = currentZ();
-  const built = params.view === 'atom' ? buildAtomCloud(Z) : buildOrbitalCloud();
-  const { positions, colors, count } = built;
+  let req: Record<string, unknown>;
+  if (params.view === 'atom') {
+    const units = atomUnits(Z);
+    const per = Math.max(1000, Math.floor(params.density / units.length));
+    req = { mode: 'atom', count: per * units.length, Z, units: units.map((u) => ({ ...u, per })) };
+  } else {
+    const A = curA(), B = curB();
+    req = { mode: B ? 'super' : 'orbital', count: params.density, Z: curZeff(), a: A, b: B ?? undefined };
+  }
+
+  const res = await requestSample(req);
+  if (res.id !== reqId) return; // a newer request superseded this one
+
+  const { positions, dens, signs, shells, count } = res;
+  const colors = colorFor(count, dens, signs, shells, curA().n);
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -269,6 +255,15 @@ function rebuild(): void {
   updateInfo();
   updateScaleBar();
   syncHash();
+}
+
+// Resample, then optionally re-frame (only on state changes, not density/colour).
+function update(reFrame: boolean): void {
+  $('log').textContent = '> sampling…';
+  rebuild().then(() => {
+    if (reFrame) frameCloud();
+    $('log').textContent = `> ${lastCount.toLocaleString()} points drawn`;
+  });
 }
 
 function frameCloud(): void {
@@ -626,34 +621,34 @@ syncView();
 
 $<HTMLSelectElement>('element').addEventListener('change', (e) => {
   params.element = (e.target as HTMLSelectElement).value;
-  updateOrbitals(); rebuild(); frameCloud();
+  updateOrbitals(); update(true);
 });
 
 $<HTMLInputElement>('excited').addEventListener('change', (e) => {
   params.excited = (e.target as HTMLInputElement).checked;
-  updateOrbitals(); rebuild(); frameCloud();
+  updateOrbitals(); update(true);
 });
 
 for (const b of document.querySelectorAll<HTMLButtonElement>('#view button'))
-  b.addEventListener('click', () => { params.view = b.dataset.v as 'atom' | 'orbital'; syncView(); rebuild(); frameCloud(); });
+  b.addEventListener('click', () => { params.view = b.dataset.v as 'atom' | 'orbital'; syncView(); update(true); });
 
 $<HTMLSelectElement>('orbital').addEventListener('change', (e) => {
-  params.orbital = (e.target as HTMLSelectElement).value; rebuild(); frameCloud();
+  params.orbital = (e.target as HTMLSelectElement).value; update(true);
 });
 $<HTMLInputElement>('superpose').addEventListener('change', (e) => {
-  params.superpose = (e.target as HTMLInputElement).checked; syncView(); rebuild(); frameCloud();
+  params.superpose = (e.target as HTMLInputElement).checked; syncView(); update(true);
 });
 $<HTMLSelectElement>('orbital2').addEventListener('change', (e) => {
-  params.orbital2 = (e.target as HTMLSelectElement).value; rebuild(); frameCloud();
+  params.orbital2 = (e.target as HTMLSelectElement).value; update(true);
 });
 
 const pointsInput = $<HTMLInputElement>('points');
 pointsInput.value = String(params.density);
-pointsInput.addEventListener('change', () => { params.density = Number(pointsInput.value); rebuild(); });
+pointsInput.addEventListener('change', () => { params.density = Number(pointsInput.value); update(false); });
 
 const colourSel = $<HTMLSelectElement>('colour');
 colourSel.value = params.colour;
-colourSel.addEventListener('change', () => { params.colour = colourSel.value as typeof params.colour; rebuild(); });
+colourSel.addEventListener('change', () => { params.colour = colourSel.value as typeof params.colour; update(false); });
 
 const rotInput = $<HTMLInputElement>('rot');
 rotInput.checked = params.autoRotate;
@@ -700,8 +695,7 @@ composer.setSize(viewport.clientWidth, viewport.clientHeight);
 camera.aspect = viewport.clientWidth / viewport.clientHeight;
 camera.updateProjectionMatrix();
 
-rebuild();
-frameCloud();
+update(true);
 
 let frames = 0, t0 = performance.now();
 renderer.setAnimationLoop(() => {
