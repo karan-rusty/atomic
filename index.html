@@ -3,26 +3,71 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Quantum Atom — orbital clouds</title>
-  <style>
-    html, body { margin: 0; height: 100%; background: #05060a; overflow: hidden; }
-    canvas { display: block; }
-    #caption {
-      position: fixed; left: 12px; bottom: 12px; max-width: 44ch;
-      font: 12px/1.45 system-ui, sans-serif; color: #9fb2c8;
-      background: rgba(8,12,20,.62); padding: 8px 10px; border-radius: 8px;
-      border: 1px solid rgba(120,150,200,.15);
-    }
-    #caption b { color: #d7e3f2; }
-  </style>
+  <title>AtomSim — quantum atom</title>
 </head>
 <body>
-  <div id="caption">
-    <b>Neutral atom · quantum orbitals</b><br />
-    Dense = more likely, sparse = less. No orbits — a probability cloud.
-    Atom view: color = shell (n). Multi-electron shapes use Slater screening
-    (an approximation); filled shells are drawn spherically.
-  </div>
+  <header id="topbar">
+    <div class="brand">AtomSim</div>
+    <div class="crumb" id="crumb">—</div>
+    <div class="status">
+      <span class="pill" id="fps">— FPS</span>
+      <span class="pill tag" id="exactpill">EXACT</span>
+      <span class="pill" id="drawcount">0 draws</span>
+    </div>
+  </header>
+
+  <aside id="left">
+    <div class="sect-label">STATE VECTOR · <span id="stateatom">—</span></div>
+    <div class="bigstate" id="statename">—</div>
+    <div class="qn" id="qn">—</div>
+    <div class="desc" id="statedesc">—</div>
+    <div id="props"></div>
+    <div class="hist-wrap">
+      <div class="sect-label">RADIAL P(r) <span class="pill tag" id="histpill">EXACT</span></div>
+      <canvas id="hist" width="252" height="72"></canvas>
+    </div>
+  </aside>
+
+  <main id="viewport">
+    <div class="overlay tl" id="drawlabel">|ψ|² Monte-Carlo · 0 draws</div>
+    <div class="overlay bl">
+      <span class="pill vis">VISUAL LIBERTY</span>
+      <span class="pill vis">MONTE-CARLO</span>
+      <span class="annot" id="annot"></span>
+    </div>
+  </main>
+
+  <aside id="right">
+    <section>
+      <div class="sect-label">SYSTEM</div>
+      <label class="row"><span>element</span><select id="element"></select></label>
+    </section>
+
+    <section>
+      <div class="sect-label">VIEW MODE</div>
+      <div class="btnlist" id="view">
+        <button data-v="atom">3D point cloud · atom</button>
+        <button data-v="orbital">3D point cloud · orbital</button>
+      </div>
+    </section>
+
+    <section id="orbSection">
+      <div class="sect-label">ORBITAL</div>
+      <label class="row"><span>state</span><select id="orbital"></select></label>
+    </section>
+
+    <section>
+      <div class="sect-label">SAMPLING</div>
+      <label class="row"><span>points</span><input id="points" type="range" min="10000" max="1000000" step="10000" /></label>
+      <label class="row"><span>point size</span><input id="psize" type="range" min="0.02" max="0.5" step="0.01" /></label>
+      <label class="row" id="phaseRow"><span>phase colour</span><input id="phase" type="checkbox" /></label>
+      <label class="row"><span>auto-rotate</span><input id="rot" type="checkbox" /></label>
+    </section>
+
+    <button id="resample" class="execute">▶ RESAMPLE</button>
+    <div class="log" id="log">&gt; ready</div>
+  </aside>
+
   <script type="module" src="/main.ts"></script>
 </body>
 </html>

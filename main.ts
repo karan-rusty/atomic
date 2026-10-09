@@ -1,23 +1,48 @@
-// main.ts — three.js point-cloud renderer + lil-gui controls.
+// main.ts — three.js point-cloud renderer wired to the custom AtomSim UI.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import GUI from 'lil-gui';
-import { sampleCloud, sampleShell } from './hydrogen.ts';
-import { SYMBOLS, electronConfig, zeff, orbitalsForAtom } from './atoms.ts';
+import './style.css';
+import { radial, sampleCloud, sampleShell } from './hydrogen.ts';
+import { SYMBOLS, electronConfig, elementName, orbitalsForAtom, zeff } from './atoms.ts';
 
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+
+const viewport = $('viewport');
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.01, 5000);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 5000);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.toneMapping = THREE.ACESFilmicToneMapping; // keep the dense core from blowing out
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(innerWidth, innerHeight);
-document.body.appendChild(renderer.domElement);
+viewport.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.autoRotate = true;
 controls.autoRotateSpeed = 1.2;
+
+// --- axes + nucleus marker ---
+function makeAxes(): THREE.LineSegments {
+  const pos = new Float32Array([-1, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1]);
+  const cols = [[1, 0.42, 0.42], [0.42, 0.85, 0.54], [0.42, 0.66, 1]];
+  const col = new Float32Array(18);
+  for (let a = 0; a < 3; a++)
+    for (let s = 0; s < 2; s++) {
+      col[(a * 2 + s) * 3] = cols[a][0];
+      col[(a * 2 + s) * 3 + 1] = cols[a][1];
+      col[(a * 2 + s) * 3 + 2] = cols[a][2];
+    }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return new THREE.LineSegments(g, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.35 }));
+}
+const axes = makeAxes();
+scene.add(axes);
+const nucleus = new THREE.Mesh(
+  new THREE.SphereGeometry(1, 16, 16),
+  new THREE.MeshBasicMaterial({ color: 0xfff0f6 }),
+);
+scene.add(nucleus);
 
 // Soft round sprite so points glow instead of showing as squares.
 const sprite = (() => {
@@ -32,24 +57,18 @@ const sprite = (() => {
   return new THREE.CanvasTexture(c);
 })();
 
-const POS = new THREE.Color('#ff5a00'); // +psi
-const NEG = new THREE.Color('#00a6ff'); // -psi
-const NEUTRAL = new THREE.Color('#9bd4ff');
-// Full-atom view colors by principal shell number n.
+const POS = new THREE.Color('#ff5c9e'); // +psi (pink)
+const NEG = new THREE.Color('#4db8ff'); // -psi
+const NEUTRAL = new THREE.Color('#d9a6c4');
 const SHELL_COLORS = [
-  new THREE.Color('#ffffff'), // 0 = unused
-  new THREE.Color('#ff5a00'), // n=1
-  new THREE.Color('#ffd24d'), // n=2
-  new THREE.Color('#38e0a0'), // n=3
-  new THREE.Color('#4db8ff'), // n=4
-  new THREE.Color('#b06cff'), // n=5
-  new THREE.Color('#ff6bb5'), // n=6
-  new THREE.Color('#9fb2c8'), // n=7
+  new THREE.Color('#ffffff'), new THREE.Color('#ff5c9e'), new THREE.Color('#ffb14d'),
+  new THREE.Color('#e0ff4d'), new THREE.Color('#4db8ff'), new THREE.Color('#b06cff'),
+  new THREE.Color('#ff6bb5'), new THREE.Color('#9fb2c8'),
 ];
 
 const params = {
   element: 'C',
-  view: 'atom', // 'atom' | 'orbital'
+  view: 'atom' as 'atom' | 'orbital',
   orbital: '2p_z',
   density: 100000,
   pointSize: 0.06,
@@ -68,10 +87,10 @@ const material = new THREE.PointsMaterial({
 });
 
 let points: THREE.Points | null = null;
+let lastCount = 0;
+let lastRadius = 1;
 
 const Z_of = (symbol: string) => SYMBOLS.indexOf(symbol) + 1;
-
-// Orbitals available for the selected atom (only those it actually has).
 let atomOrbitals = orbitalsForAtom(Z_of(params.element));
 
 // 98th-percentile radius, so the camera frames the cloud regardless of Z.
@@ -93,7 +112,6 @@ function buildAtomCloud(Z: number): { positions: Float32Array; colors: Float32Ar
   const positions = new Float32Array(count * 3);
   const colors = new Float32Array(count * 3);
   const c = new THREE.Color();
-
   let off = 0;
   for (const s of shells) {
     positions.set(sampleShell(s.n, s.l, zeff(Z, s.n, s.l), per), off * 3);
@@ -130,7 +148,6 @@ function rebuild(reframe: boolean): void {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
   if (points) {
     scene.remove(points);
     points.geometry.dispose();
@@ -138,55 +155,218 @@ function rebuild(reframe: boolean): void {
   points = new THREE.Points(geo, material);
   scene.add(points);
 
+  lastCount = count;
+  lastRadius = percentileRadius(positions, count, 0.98);
+
+  axes.scale.setScalar(lastRadius * 1.15);
+  nucleus.scale.setScalar(lastRadius * 0.012);
+
   if (reframe) {
-    // Diagonal view so lobes (e.g. 2p_z along z) aren't seen end-on.
-    const d = 3 * percentileRadius(positions, count, 0.98);
+    const d = 3 * lastRadius;
     camera.position.set(0.7, 0.45, 0.9).normalize().multiplyScalar(Math.max(d, 2));
     controls.target.set(0, 0, 0);
   }
+  updateInfo();
 }
 
-const gui = new GUI();
-gui.add(params, 'element', SYMBOLS).onChange(() => {
-  updateOrbitals();
-  rebuild(true);
-});
-gui.add(params, 'view', ['atom', 'orbital']).name('view').onChange(syncView);
-const orbCtrl = gui.add(params, 'orbital', Object.keys(atomOrbitals)).onChange(() => rebuild(true));
+const sup = (n: number) => String(n).replace(/[0-9]/g, (d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[+d]);
 
-// Refresh the orbital list when the element changes, keeping a valid selection.
+function addProp(key: string, value: string, tag?: string): void {
+  const row = document.createElement('div');
+  row.className = 'prop';
+  row.innerHTML = `<span class="k">${key}</span><span class="v">${value}</span>` +
+    (tag ? `<span class="tagcell"><span class="pill tag">${tag}</span></span>` : '');
+  $('props').appendChild(row);
+}
+
+function drawHist(n: number, l: number, Z: number): void {
+  const cv = $<HTMLCanvasElement>('hist');
+  cv.width = cv.clientWidth;
+  const ctx = cv.getContext('2d')!;
+  const w = cv.width, h = cv.height;
+  ctx.clearRect(0, 0, w, h);
+  const rMax = (4 * n * n) / Z;
+  const bars = 48;
+  const vals: number[] = [];
+  let max = 0;
+  for (let i = 0; i < bars; i++) {
+    const r = ((i + 0.5) / bars) * rMax;
+    const v = r * r * radial(n, l, Z * r) ** 2; // scaled to charge Z
+    vals.push(v);
+    if (v > max) max = v;
+  }
+  const bw = w / bars;
+  for (let i = 0; i < bars; i++) {
+    const bh = (vals[i] / max) * (h - 10);
+    ctx.fillStyle = `rgba(255,92,158,${0.3 + 0.6 * (vals[i] / max)})`;
+    ctx.fillRect(i * bw + 1, h - 7 - bh, bw - 2, bh);
+  }
+  ctx.fillStyle = 'rgba(255,255,255,.15)';
+  ctx.fillRect(0, h - 7, w, 1);
+  ctx.fillStyle = '#61727a';
+  ctx.font = '10px monospace';
+  ctx.fillText('r = 0', 4, h - 0.5);
+  ctx.textAlign = 'right';
+  ctx.fillText(`${rMax.toFixed(1)} a₀`, w - 6, h - 0.5);
+  ctx.textAlign = 'left';
+}
+
+function updateInfo(): void {
+  const Z = Z_of(params.element);
+  const sym = params.element;
+  const exact = Z === 1;
+  $('crumb').textContent = `${sym} · ${params.view === 'atom' ? 'full atom' : params.orbital} · |ψ|² Monte-Carlo`;
+  $('stateatom').textContent = `${elementName(Z).toUpperCase()} Z=${Z}`;
+  $('exactpill').textContent = exact ? 'EXACT' : 'SCREENED';
+  $('drawcount').textContent = `${lastCount.toLocaleString()} draws`;
+  $('drawlabel').textContent = `|ψ|² Monte-Carlo · ${lastCount.toLocaleString()} draws`;
+  $('props').innerHTML = '';
+
+  if (params.view === 'orbital') {
+    const { n, l, m } = atomOrbitals[params.orbital];
+    const ze = zeff(Z, n, l);
+    $('statename').textContent = `${params.orbital} (m = ${m})`;
+    $('qn').textContent = `n=${n}  ℓ=${l}  m=${m}   Z_eff=${ze.toFixed(2)}`;
+    $('statedesc').textContent = exact
+      ? 'Ordinary hydrogen: electron + proton. Shapes are exact.'
+      : `${elementName(Z)}: screened hydrogenic orbital (Slater approximation).`;
+    const E = (-ze * ze) / (2 * n * n);
+    addProp('Energy', `${E.toFixed(4)} Ha · ${(E * 27.2114).toFixed(3)} eV`, exact ? 'EXACT' : 'SCREENED');
+    const rmean = (3 * n * n - l * (l + 1)) / (2 * ze);
+    addProp('⟨r⟩', `${rmean.toFixed(3)} a₀ · ${(rmean * 52.9177).toFixed(1)} pm`, exact ? 'EXACT' : 'SCREENED');
+    addProp('Nodes', `${n - l - 1} radial · ${l} angular`, 'EXACT');
+    addProp('Sampled points', lastCount.toLocaleString(), 'MONTE-CARLO');
+    $('histpill').textContent = exact ? 'EXACT' : 'SCREENED';
+    drawHist(n, l, ze);
+    $('annot').textContent = `axes ±${(lastRadius * 1.15).toFixed(1)} a₀ · z is the quantization axis · nucleus marker not to scale`;
+  } else {
+    const cfg = electronConfig(Z);
+    const outer = cfg.reduce((a, b) => (b.n > a.n ? b : a), cfg[0]);
+    $('statename').textContent = elementName(Z);
+    $('qn').textContent = `Z=${Z}  ·  ${cfg.length} occupied subshell${cfg.length > 1 ? 's' : ''}`;
+    $('statedesc').textContent =
+      'Neutral atom: each shell is a screened hydrogenic orbital (Slater). Filled shells are spherical.';
+    addProp('Electrons', String(Z), exact ? 'EXACT' : 'APPROX');
+    addProp('Configuration', cfg.map((s) => `${s.n}${'spdf'[s.l]}${sup(s.e)}`).join(' '), exact ? 'EXACT' : 'APPROX');
+    addProp('Sampled points', lastCount.toLocaleString(), 'MONTE-CARLO');
+    $('histpill').textContent = exact ? 'EXACT' : 'SCREENED';
+    drawHist(outer.n, outer.l, zeff(Z, outer.n, outer.l));
+    $('annot').textContent = `axes ±${(lastRadius * 1.15).toFixed(1)} a₀ · colour = shell (n) · nucleus marker not to scale`;
+  }
+}
+
+// --- UI wiring ---
+function fillSelect(sel: HTMLSelectElement, values: string[], current: string): void {
+  sel.innerHTML = '';
+  for (const v of values) {
+    const o = document.createElement('option');
+    o.value = v;
+    o.textContent = v;
+    sel.appendChild(o);
+  }
+  if (values.includes(current)) sel.value = current;
+}
+
 function updateOrbitals(): void {
   atomOrbitals = orbitalsForAtom(Z_of(params.element));
   const names = Object.keys(atomOrbitals);
   if (!names.includes(params.orbital)) params.orbital = names[0];
-  orbCtrl.options(names);
-  orbCtrl.setValue(params.orbital);
+  fillSelect($<HTMLSelectElement>('orbital'), names, params.orbital);
 }
-gui.add(params, 'density', 10000, 1000000, 10000).name('points').onFinishChange(() => rebuild(false));
-gui.add(params, 'pointSize', 0.02, 0.5, 0.01).onChange((v: number) => (material.size = v));
-const phaseCtrl = gui.add(params, 'phaseColor').onChange(() => rebuild(false));
-gui.add(params, 'autoRotate').onChange((v: boolean) => (controls.autoRotate = v));
 
 function syncView(): void {
-  if (params.view === 'orbital') {
-    orbCtrl.show();
-    phaseCtrl.show();
-  } else {
-    orbCtrl.hide();
-    phaseCtrl.hide();
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#view button')) {
+    b.classList.toggle('active', b.dataset.v === params.view);
   }
-  rebuild(true);
+  $('orbSection').classList.toggle('hidden', params.view !== 'orbital');
+  $('phaseRow').classList.toggle('hidden', params.view !== 'orbital');
 }
 
-addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
+const log = (msg: string) => ($('log').textContent = `> ${msg}`);
 
+fillSelect($<HTMLSelectElement>('element'), SYMBOLS, params.element);
 updateOrbitals();
 syncView();
+
+const elementSel = $<HTMLSelectElement>('element');
+elementSel.addEventListener('change', () => {
+  params.element = elementSel.value;
+  updateOrbitals();
+  log(`${elementName(Z_of(params.element))} selected`);
+  rebuild(true);
+});
+
+for (const b of document.querySelectorAll<HTMLButtonElement>('#view button')) {
+  b.addEventListener('click', () => {
+    params.view = b.dataset.v as 'atom' | 'orbital';
+    syncView();
+    rebuild(true);
+  });
+}
+
+const orbSel = $<HTMLSelectElement>('orbital');
+orbSel.addEventListener('change', () => {
+  params.orbital = orbSel.value;
+  rebuild(true);
+});
+
+const pointsInput = $<HTMLInputElement>('points');
+pointsInput.value = String(params.density);
+pointsInput.addEventListener('change', () => {
+  params.density = Number(pointsInput.value);
+  rebuild(false);
+});
+
+const psizeInput = $<HTMLInputElement>('psize');
+psizeInput.value = String(params.pointSize);
+psizeInput.addEventListener('input', () => {
+  params.pointSize = Number(psizeInput.value);
+  material.size = params.pointSize;
+});
+
+const phaseInput = $<HTMLInputElement>('phase');
+phaseInput.checked = params.phaseColor;
+phaseInput.addEventListener('change', () => {
+  params.phaseColor = phaseInput.checked;
+  if (params.view === 'orbital') rebuild(false);
+});
+
+const rotInput = $<HTMLInputElement>('rot');
+rotInput.checked = params.autoRotate;
+controls.autoRotate = params.autoRotate;
+rotInput.addEventListener('change', () => {
+  controls.autoRotate = rotInput.checked;
+});
+
+$('resample').addEventListener('click', () => {
+  rebuild(false);
+  log(`${lastCount.toLocaleString()} points drawn`);
+});
+
+addEventListener('resize', () => {
+  const w = viewport.clientWidth, h = viewport.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+
+const sizeToViewport = () => renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+sizeToViewport();
+camera.aspect = viewport.clientWidth / viewport.clientHeight;
+camera.updateProjectionMatrix();
+
+rebuild(true);
+
+let frames = 0;
+let t0 = performance.now();
 renderer.setAnimationLoop(() => {
   controls.update();
   renderer.render(scene, camera);
+  frames++;
+  const now = performance.now();
+  if (now - t0 >= 500) {
+    $('fps').textContent = `${Math.round((frames * 1000) / (now - t0))} FPS`;
+    frames = 0;
+    t0 = now;
+  }
 });
