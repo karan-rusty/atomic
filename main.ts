@@ -79,6 +79,7 @@ const params = {
   orbital: '2p_z',
   superpose: false,
   orbital2: '2p_x',
+  evolve: false,
   density: 100000,
   colour: 'phase' as 'phase' | 'shell' | 'density',
   autoRotate: true,
@@ -92,18 +93,24 @@ const pointUniforms = {
   uSize: { value: 0.1 },   // world-space point size
   uScale: { value: 800 },  // viewport scaling for size attenuation
   uDist: { value: 16 },    // camera distance, for depth fade
+  uCos: { value: 1 },      // cos(ΔE·t) for time evolution
+  uTimeEvo: { value: 0 },  // 1 = colour by instantaneous |ψ(t)|²
+  uDensMax: { value: 1 },
 };
 const material = new THREE.ShaderMaterial({
   uniforms: pointUniforms,
   vertexShader: `
     attribute vec3 aColor;
+    attribute vec2 aPsi;
     uniform float uSize;
     uniform float uScale;
     uniform float uDist;
     varying vec3 vColor;
     varying float vFade;
+    varying vec2 vPsi;
     void main() {
       vColor = aColor;
+      vPsi = aPsi;
       vec4 mv = modelViewMatrix * vec4(position, 1.0);
       gl_Position = projectionMatrix * mv;
       gl_PointSize = uSize * uScale / max(-mv.z, 0.0001);
@@ -111,13 +118,29 @@ const material = new THREE.ShaderMaterial({
     }
   `,
   fragmentShader: `
+    uniform float uCos;
+    uniform float uTimeEvo;
+    uniform float uDensMax;
     varying vec3 vColor;
     varying float vFade;
+    varying vec2 vPsi;
+    vec3 densityColor(float t) {
+      vec3 dark = vec3(0.10, 0.03, 0.12);
+      vec3 pos = vec3(1.0, 0.30, 0.62);
+      vec3 c = mix(dark, pos, clamp(t * 1.4, 0.0, 1.0));
+      return mix(c, vec3(1.0), clamp((t - 0.6) / 0.4, 0.0, 1.0));
+    }
     void main() {
       float r = length(gl_PointCoord - 0.5);
       if (r > 0.5) discard;
+      vec3 col = vColor;
+      if (uTimeEvo > 0.5) {
+        // |ψ(t)|² = ½(|a|²+|b|²) + ab·cos(ΔE t)
+        float d = 0.5 * (vPsi.x * vPsi.x + vPsi.y * vPsi.y) + vPsi.x * vPsi.y * uCos;
+        col = densityColor(sqrt(max(d, 0.0) / uDensMax));
+      }
       float a = smoothstep(0.5, 0.0, r) * vFade;
-      gl_FragColor = vec4(vColor * a, a);
+      gl_FragColor = vec4(col * a, a);
     }
   `,
   transparent: true,
@@ -188,6 +211,7 @@ interface SampleResult {
   dens: Float32Array;
   signs: Int8Array | null;
   shells: Uint8Array | null;
+  psi: Float32Array | null;
   count: number;
 }
 
@@ -241,6 +265,20 @@ async function rebuild(): Promise<void> {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geo.setAttribute('aColor', new THREE.BufferAttribute(colors, 3));
+  if (params.superpose && params.evolve && params.view === 'orbital' && res.psi) {
+    const psi = res.psi;
+    geo.setAttribute('aPsi', new THREE.BufferAttribute(psi, 2));
+    let dmax = 1e-30;
+    for (let i = 0; i < count; i++) {
+      const pa = psi[2 * i], pb = psi[2 * i + 1];
+      const d = 0.5 * (pa * pa + pb * pb) + Math.abs(pa * pb);
+      if (d > dmax) dmax = d;
+    }
+    pointUniforms.uDensMax.value = dmax;
+    pointUniforms.uTimeEvo.value = 1;
+  } else {
+    pointUniforms.uTimeEvo.value = 0;
+  }
   if (points) { scene.remove(points); points.geometry.dispose(); }
   points = new THREE.Points(geo, material);
   scene.add(points);
@@ -519,7 +557,9 @@ function updateInfo(): void {
     $('statename').textContent = superpose ? `${params.orbital} + ${params.orbital2}` : `${params.orbital} (m = ${A.m})`;
     $('qn').textContent = `n=${A.n}  ℓ=${lEff}  m=${A.m}   Z_eff=${Ze.toFixed(2)}${superpose ? '  (mixed)' : ''}`;
     $('statedesc').textContent = superpose
-      ? 'Superposition of two states: |ψ_a + ψ_b|² shows where they reinforce and cancel.'
+      ? params.evolve
+        ? 'Time-evolving superposition: |ψ(t)|² oscillates at the beat frequency (slowed to a visible rate).'
+        : 'Superposition of two states: |ψ_a + ψ_b|² shows where they reinforce and cancel.'
       : exact
         ? 'Ordinary hydrogen: electron + proton. Shapes are exact.'
         : `${elementName(Z)}: screened hydrogenic orbital (Slater approximation).`;
@@ -625,6 +665,7 @@ function applyHash(): void {
   const col = h.get('col'); if (col === 'phase' || col === 'shell' || col === 'density') params.colour = col;
   params.superpose = h.get('sup') === '1';
   params.excited = h.get('exc') === '1';
+  params.evolve = h.get('evo') === '1';
   params.autoRotate = h.get('rot') !== '0';
   params.fitView = h.get('fit') !== '0';
 }
@@ -634,6 +675,7 @@ function syncHash(): void {
     el: params.element, view: params.view, orb: params.orbital, orb2: params.orbital2,
     pts: String(params.density), col: params.colour,
     sup: params.superpose ? '1' : '0', exc: params.excited ? '1' : '0',
+    evo: params.evolve ? '1' : '0',
     rot: params.autoRotate ? '1' : '0', fit: params.fitView ? '1' : '0',
   });
   history.replaceState(null, '', '#' + h.toString());
@@ -667,6 +709,7 @@ function syncView(): void {
   }
   $('orbSection').classList.toggle('hidden', params.view !== 'orbital');
   $('orb2Row').classList.toggle('hidden', !(params.view === 'orbital' && params.superpose));
+  $('evolveRow').classList.toggle('hidden', !(params.view === 'orbital' && params.superpose));
 }
 
 applyHash();
@@ -684,6 +727,7 @@ const colourSel = $<HTMLSelectElement>('colour');
 const rotInput = $<HTMLInputElement>('rot');
 const fitInput = $<HTMLInputElement>('fit');
 const measureInput = $<HTMLInputElement>('measure');
+const evolveInput = $<HTMLInputElement>('evolve');
 
 // --- actions (shared by controls and keyboard) ---
 function setElement(sym: string): void { params.element = sym; elementSel.value = sym; updateOrbitals(); update(true); }
@@ -697,6 +741,7 @@ function cycleColour(): void { const m: Array<typeof params.colour> = ['phase', 
 function setRotate(v: boolean): void { params.autoRotate = v; rotInput.checked = v; controls.autoRotate = v; }
 function setFit(v: boolean): void { params.fitView = v; fitInput.checked = v; if (v) frameCloud(); else updatePointSize(); }
 function setMeasure(v: boolean): void { params.measure = v; measureInput.checked = v; if (!v) marker.visible = false; }
+function setEvolve(v: boolean): void { params.evolve = v; evolveInput.checked = v; update(false); }
 function savePng(): void {
   composer.render();
   const a = document.createElement('a');
@@ -721,6 +766,7 @@ fitInput.checked = params.fitView;
 excitedInput.checked = params.excited;
 superposeInput.checked = params.superpose;
 measureInput.checked = params.measure;
+evolveInput.checked = params.evolve;
 
 // --- listeners ---
 elementSel.addEventListener('change', () => setElement(elementSel.value));
@@ -735,6 +781,7 @@ colourSel.addEventListener('change', () => setColour(colourSel.value as typeof p
 rotInput.addEventListener('change', () => setRotate(rotInput.checked));
 fitInput.addEventListener('change', () => setFit(fitInput.checked));
 measureInput.addEventListener('change', () => setMeasure(measureInput.checked));
+evolveInput.addEventListener('change', () => setEvolve(evolveInput.checked));
 $('copylink').addEventListener('click', copyLink);
 $('savepng').addEventListener('click', savePng);
 
@@ -749,6 +796,7 @@ addEventListener('keydown', (e) => {
     case 'c': cycleColour(); break;
     case 'e': setExcited(!params.excited); break;
     case 'm': setMeasure(!params.measure); break;
+    case 't': setEvolve(!params.evolve); break;
     case 's': savePng(); break;
     case '[': stepElement(-1); break;
     case ']': stepElement(1); break;
@@ -775,6 +823,10 @@ let frames = 0, t0 = performance.now();
 renderer.setAnimationLoop(() => {
   controls.update();
   pointUniforms.uDist.value = camera.position.distanceTo(controls.target) || CAM_DIST;
+  if (pointUniforms.uTimeEvo.value > 0.5) {
+    // visual period 3 s (real atomic beat frequencies are ~10^15 Hz — slowed here)
+    pointUniforms.uCos.value = Math.cos(((performance.now() / 1000) * Math.PI * 2) / 3);
+  }
   composer.render();
   updateAxisLabels();
   frames++;

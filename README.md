@@ -14,7 +14,9 @@ wavefunction phase (+ψ / −ψ), the shell, or the density.
   atoms (all 118 elements, Slater-screened hydrogenic shapes).
 - **Atom view** (all occupied shells) and **orbital view** (a single state),
   including an **excited-state** toggle.
-- **Superposition** of two orbitals — see where they reinforce and cancel.
+- **Superposition** of two orbitals — see where they reinforce and cancel, with
+  optional **time evolution** (the cloud oscillates at the beat frequency).
+- **Orbital gallery** — clickable thumbnails of every orbital for the element.
 - Live panels: quantum numbers, energy, `⟨r⟩`, `|L|`, `⟨1/r⟩`, most-probable
   radius, node radii, **R(r)/P(r) plot**, **energy-level ladder**,
   **emission spectrum**, and a **2D cross-section** heatmap.

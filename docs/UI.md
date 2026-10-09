@@ -109,6 +109,7 @@ Ignored while typing in a `<select>`/`<input>`.
 | `m` | toggle measure mode |
 | `s` | save PNG |
 | `[` / `]` | previous / next element |
+| `t` | toggle time evolution (superposition) |
 | `Esc` | clear the measurement marker |
 
 ## Responsive

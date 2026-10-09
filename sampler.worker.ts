@@ -19,11 +19,13 @@ interface Req {
 }
 
 // dens is normalised to [0,1]: per unit for atom mode, globally for orbital modes.
-function post(id: number, positions: Float32Array, dens: Float32Array, signs: Int8Array | null, shells: Uint8Array | null) {
+// psi (2*count) holds [ψ_a, ψ_b] per point for time evolution (superposition).
+function post(id: number, positions: Float32Array, dens: Float32Array, signs: Int8Array | null, shells: Uint8Array | null, psi: Float32Array | null) {
   const transfer: Transferable[] = [positions.buffer, dens.buffer];
   if (signs) transfer.push(signs.buffer);
   if (shells) transfer.push(shells.buffer);
-  ctx.postMessage({ id, positions, dens, signs, shells, count: positions.length / 3 }, transfer);
+  if (psi) transfer.push(psi.buffer);
+  ctx.postMessage({ id, positions, dens, signs, shells, psi, count: positions.length / 3 }, transfer);
 }
 
 ctx.onmessage = (e: MessageEvent<Req>) => {
@@ -49,7 +51,7 @@ ctx.onmessage = (e: MessageEvent<Req>) => {
       for (let i = 0; i < u.per; i++) dens[off + i] = Math.sqrt(dens[off + i] / max);
       off += u.per;
     }
-    post(m.id, positions, dens, null, shells);
+    post(m.id, positions, dens, null, shells, null);
     return;
   }
 
@@ -62,15 +64,18 @@ ctx.onmessage = (e: MessageEvent<Req>) => {
     ({ positions, signs } = sampleCloud(A.n, A.l, A.m, m.count, m.Z));
   }
   const dens = new Float32Array(m.count);
+  const psi = new Float32Array(m.count * 2);
   let max = 1e-30;
   for (let i = 0; i < m.count; i++) {
     const x = positions[3 * i], y = positions[3 * i + 1], z = positions[3 * i + 2];
-    let v = psiAt(A.n, A.l, A.m, m.Z, x, y, z);
-    if (m.mode === 'super' && m.b) v += psiAt(m.b.n, m.b.l, m.b.m, m.Z, x, y, z);
-    const d = v * v;
+    const pa = psiAt(A.n, A.l, A.m, m.Z, x, y, z);
+    const pb = m.mode === 'super' && m.b ? psiAt(m.b.n, m.b.l, m.b.m, m.Z, x, y, z) : 0;
+    psi[2 * i] = pa;
+    psi[2 * i + 1] = pb;
+    const d = (pa + pb) * (pa + pb);
     dens[i] = d;
     if (d > max) max = d;
   }
   for (let i = 0; i < m.count; i++) dens[i] = Math.sqrt(dens[i] / max);
-  post(m.id, positions, dens, signs, null);
+  post(m.id, positions, dens, signs, null, psi);
 };

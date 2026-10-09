@@ -92,7 +92,10 @@ Most-probable radius and node radii are found by numeric scans (`mostProbableRad
   (Σ_m |Y_lm|² is constant). **Open shells follow Hund's rule** (singly-occupied
   m first), so e.g. carbon 2p² shows two lobes while nitrogen 2p³ is spherical.
   (Which degenerate m are singly occupied is arbitrary; a canonical order is used.)
-- **Superposition** uses the first orbital's `Z_eff` for both states.
+- **Superposition** uses the first orbital's `Z_eff` for both states. **Time
+  evolution** computes `|ψ(t)|² = ½(|a|²+|b|²) + ab·cos(ΔE·t)` in the shader;
+  the phase is animated at a fixed *visual* rate (real beat frequencies are
+  ~10¹⁵ Hz, far too fast to see).
 - **Spectrum** uses hydrogenic `E_n` with the valence `Z_eff` and assumes the
   `Δl = ±1` selection rule. No fine structure, spin, or relativistic effects.
 - The **energy ladder is evenly spaced by n**, not to scale (real levels crowd at

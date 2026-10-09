@@ -197,7 +197,7 @@ export function nodeRadii(n: number, l: number, Z: number): number[] {
 // Sample from |psi_a + psi_b|^2 (a two-orbital superposition) by importance
 // sampling: draw from either orbital, accept with |a+b|^2 / (2(|a|^2+|b|^2)).
 export function sampleSuperposition(a: Orbital, b: Orbital, count: number, Z: number): Cloud {
-  const pool = count * 4;
+  const pool = count * 3;
   const A = sampleCloud(a.n, a.l, a.m, pool, Z);
   const B = sampleCloud(b.n, b.l, b.m, pool, Z);
   const positions = new Float32Array(count * 3);
