@@ -94,6 +94,27 @@ are the tag styles used throughout.
 Other palettes live near the top of `main.ts`: `POS`, `NEG`, `DARK`, `WHITE`,
 `SHELL_COLORS`. Axis colours are in the `axisDefs` array.
 
+## Keyboard shortcuts
+
+Ignored while typing in a `<select>`/`<input>`.
+
+| key | action |
+|---|---|
+| `v` | toggle view (atom / orbital) |
+| `r` | toggle auto-rotate |
+| `f` | toggle fit view |
+| `c` | cycle colour mode |
+| `e` | toggle excited states |
+| `m` | toggle measure mode |
+| `s` | save PNG |
+| `[` / `]` | previous / next element |
+| `Esc` | clear the measurement marker |
+
+## Responsive
+
+`style.css` media queries: < 1100 px narrows the side panels; < 820 px stacks
+the viewport above the panels in a single scrolling column.
+
 ## Style rules
 
 - Keep the aesthetic: monospace, uppercase micro-labels (`RADIAL P(R)`), `◦`

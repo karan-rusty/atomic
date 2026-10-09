@@ -13,8 +13,8 @@
       <span class="pill" id="fps">— FPS</span>
       <span class="pill tag" id="exactpill">EXACT</span>
       <span class="pill" id="drawcount">0 draws</span>
-      <span class="pill btn" id="copylink">copy link</span>
-      <span class="pill btn" id="savepng">PNG</span>
+      <span class="pill btn" id="copylink" title="Copy a shareable link (updates the URL)">copy link</span>
+      <span class="pill btn" id="savepng" title="Save the current view as a PNG">PNG</span>
     </div>
   </header>
 
@@ -68,9 +68,9 @@
 
     <section>
       <div class="sect-label">VIEW MODE</div>
-      <div class="btnlist" id="view">
-        <button data-v="atom">3D point cloud · atom</button>
-        <button data-v="orbital">3D point cloud · orbital</button>
+      <div class="btnlist" id="view" role="group" aria-label="View mode">
+        <button data-v="atom" aria-pressed="true">3D point cloud · atom</button>
+        <button data-v="orbital" aria-pressed="false">3D point cloud · orbital</button>
       </div>
     </section>
 
@@ -104,7 +104,7 @@
       </div>
     </details>
 
-    <div class="log" id="log">&gt; ready</div>
+    <div class="log" id="log" aria-live="polite">&gt; ready</div>
   </aside>
 
   <script type="module" src="/main.ts"></script>

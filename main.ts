@@ -22,6 +22,8 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 viewport.appendChild(renderer.domElement);
+renderer.domElement.setAttribute('role', 'img');
+renderer.domElement.setAttribute('aria-label', '3D electron probability cloud');
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -608,8 +610,11 @@ function updateOrbitals(): void {
 }
 
 function syncView(): void {
-  for (const b of document.querySelectorAll<HTMLButtonElement>('#view button'))
-    b.classList.toggle('active', b.dataset.v === params.view);
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#view button')) {
+    const on = b.dataset.v === params.view;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', String(on));
+  }
   $('orbSection').classList.toggle('hidden', params.view !== 'orbital');
   $('orb2Row').classList.toggle('hidden', !(params.view === 'orbital' && params.superpose));
 }
@@ -619,67 +624,86 @@ fillSelect($<HTMLSelectElement>('element'), SYMBOLS, params.element);
 updateOrbitals();
 syncView();
 
-$<HTMLSelectElement>('element').addEventListener('change', (e) => {
-  params.element = (e.target as HTMLSelectElement).value;
-  updateOrbitals(); update(true);
-});
-
-$<HTMLInputElement>('excited').addEventListener('change', (e) => {
-  params.excited = (e.target as HTMLInputElement).checked;
-  updateOrbitals(); update(true);
-});
-
-for (const b of document.querySelectorAll<HTMLButtonElement>('#view button'))
-  b.addEventListener('click', () => { params.view = b.dataset.v as 'atom' | 'orbital'; syncView(); update(true); });
-
-$<HTMLSelectElement>('orbital').addEventListener('change', (e) => {
-  params.orbital = (e.target as HTMLSelectElement).value; update(true);
-});
-$<HTMLInputElement>('superpose').addEventListener('change', (e) => {
-  params.superpose = (e.target as HTMLInputElement).checked; syncView(); update(true);
-});
-$<HTMLSelectElement>('orbital2').addEventListener('change', (e) => {
-  params.orbital2 = (e.target as HTMLSelectElement).value; update(true);
-});
-
+const elementSel = $<HTMLSelectElement>('element');
+const excitedInput = $<HTMLInputElement>('excited');
+const orbitalSel = $<HTMLSelectElement>('orbital');
+const superposeInput = $<HTMLInputElement>('superpose');
+const orbital2Sel = $<HTMLSelectElement>('orbital2');
 const pointsInput = $<HTMLInputElement>('points');
-pointsInput.value = String(params.density);
-pointsInput.addEventListener('change', () => { params.density = Number(pointsInput.value); update(false); });
-
 const colourSel = $<HTMLSelectElement>('colour');
-colourSel.value = params.colour;
-colourSel.addEventListener('change', () => { params.colour = colourSel.value as typeof params.colour; update(false); });
-
 const rotInput = $<HTMLInputElement>('rot');
-rotInput.checked = params.autoRotate;
-controls.autoRotate = params.autoRotate;
-rotInput.addEventListener('change', () => { controls.autoRotate = rotInput.checked; });
-
 const fitInput = $<HTMLInputElement>('fit');
-fitInput.checked = params.fitView;
-fitInput.addEventListener('change', () => {
-  params.fitView = fitInput.checked;
-  if (params.fitView) frameCloud(); else updatePointSize();
-});
+const measureInput = $<HTMLInputElement>('measure');
 
-$<HTMLInputElement>('measure').addEventListener('change', (e) => {
-  params.measure = (e.target as HTMLInputElement).checked;
-  if (!params.measure) marker.visible = false;
-});
-
-$('copylink').addEventListener('click', () => {
-  syncHash();
-  navigator.clipboard?.writeText(location.href)
-    .then(() => { $('log').textContent = '> link copied'; })
-    .catch(() => { $('log').textContent = '> copy failed'; });
-});
-$('savepng').addEventListener('click', () => {
+// --- actions (shared by controls and keyboard) ---
+function setElement(sym: string): void { params.element = sym; elementSel.value = sym; updateOrbitals(); update(true); }
+function stepElement(d: number): void { const i = SYMBOLS.indexOf(params.element); setElement(SYMBOLS[(i + d + SYMBOLS.length) % SYMBOLS.length]); }
+function setView(v: 'atom' | 'orbital'): void { params.view = v; syncView(); update(true); }
+function setOrbital(name: string): void { params.orbital = name; orbitalSel.value = name; update(true); }
+function setSuperpose(v: boolean): void { params.superpose = v; superposeInput.checked = v; syncView(); update(true); }
+function setExcited(v: boolean): void { params.excited = v; excitedInput.checked = v; updateOrbitals(); update(true); }
+function setColour(mode: typeof params.colour): void { params.colour = mode; colourSel.value = mode; update(false); }
+function cycleColour(): void { const m: Array<typeof params.colour> = ['phase', 'shell', 'density']; setColour(m[(m.indexOf(params.colour) + 1) % m.length]); }
+function setRotate(v: boolean): void { params.autoRotate = v; rotInput.checked = v; controls.autoRotate = v; }
+function setFit(v: boolean): void { params.fitView = v; fitInput.checked = v; if (v) frameCloud(); else updatePointSize(); }
+function setMeasure(v: boolean): void { params.measure = v; measureInput.checked = v; if (!v) marker.visible = false; }
+function savePng(): void {
   composer.render();
   const a = document.createElement('a');
   a.href = renderer.domElement.toDataURL('image/png');
   a.download = `atomsim-${params.element}-${params.view}.png`;
   a.click();
   $('log').textContent = '> PNG saved';
+}
+function copyLink(): void {
+  syncHash();
+  navigator.clipboard?.writeText(location.href)
+    .then(() => { $('log').textContent = '> link copied'; })
+    .catch(() => { $('log').textContent = '> copy failed'; });
+}
+
+// --- initial control values ---
+pointsInput.value = String(params.density);
+colourSel.value = params.colour;
+rotInput.checked = params.autoRotate;
+controls.autoRotate = params.autoRotate;
+fitInput.checked = params.fitView;
+excitedInput.checked = params.excited;
+superposeInput.checked = params.superpose;
+measureInput.checked = params.measure;
+
+// --- listeners ---
+elementSel.addEventListener('change', () => setElement(elementSel.value));
+excitedInput.addEventListener('change', () => setExcited(excitedInput.checked));
+for (const b of document.querySelectorAll<HTMLButtonElement>('#view button'))
+  b.addEventListener('click', () => setView(b.dataset.v as 'atom' | 'orbital'));
+orbitalSel.addEventListener('change', () => setOrbital(orbitalSel.value));
+superposeInput.addEventListener('change', () => setSuperpose(superposeInput.checked));
+orbital2Sel.addEventListener('change', () => { params.orbital2 = orbital2Sel.value; update(true); });
+pointsInput.addEventListener('change', () => { params.density = Number(pointsInput.value); update(false); });
+colourSel.addEventListener('change', () => setColour(colourSel.value as typeof params.colour));
+rotInput.addEventListener('change', () => setRotate(rotInput.checked));
+fitInput.addEventListener('change', () => setFit(fitInput.checked));
+measureInput.addEventListener('change', () => setMeasure(measureInput.checked));
+$('copylink').addEventListener('click', copyLink);
+$('savepng').addEventListener('click', savePng);
+
+// --- keyboard shortcuts ---
+addEventListener('keydown', (e) => {
+  const tag = (e.target as HTMLElement).tagName;
+  if (tag === 'SELECT' || tag === 'INPUT') return;
+  switch (e.key) {
+    case 'v': setView(params.view === 'atom' ? 'orbital' : 'atom'); break;
+    case 'r': setRotate(!params.autoRotate); break;
+    case 'f': setFit(!params.fitView); break;
+    case 'c': cycleColour(); break;
+    case 'e': setExcited(!params.excited); break;
+    case 'm': setMeasure(!params.measure); break;
+    case 's': savePng(); break;
+    case '[': stepElement(-1); break;
+    case ']': stepElement(1); break;
+    case 'Escape': marker.visible = false; break;
+  }
 });
 
 addEventListener('resize', () => {
