@@ -61,25 +61,50 @@ Always run `npm run typecheck` and `npm test` after a change. They are fast.
   cloud. `frameCloud()` is only called on state changes, not on density/colour.
 - **`Z_eff` matters.** Never sample at `Z = 1` for a multi-electron atom; use
   `zeff(Z, n, l)`. Heavy-atom inner shells are tiny and very dense.
+- **Sampling is async.** `rebuild()` awaits the worker and drops stale responses
+  (id mismatch). DOM listeners call `update(reFrame)`, never `rebuild()` directly.
+  `frameCloud()` needs `lastRadius`, so it must run *after* the rebuild resolves
+  — which is exactly what `update()` does.
+- **The point shader is hand-written** (`ShaderMaterial`). Geometry attributes:
+  `position`, `aColor`, and `aPsi` (vec2 = `[ψ_a, ψ_b]` per point, superpositions
+  only). Uniforms live in `pointUniforms`. Three only auto-injects
+  position/normal/uv — declare any custom attribute in the shader.
+- **Two colormaps.** JS `densityColor()` and the GLSL `densityColor()` (used for
+  time evolution) are kept in sync by hand.
+- **URL hash is the share state.** `syncHash()` runs at the end of `rebuild()`;
+  `applyHash()` runs once at startup. Add every new param to **both**.
 - **Superposition uses the first orbital's `Z_eff` for both states** (approximation).
 - **Orbital list is gated**: ground-config orbitals only, unless `excited` is on.
 - The **energy ladder is evenly spaced by n** on purpose (real levels crowd at
   E = 0 and become unreadable).
+- **The gallery** (`buildGallery`) rebuilds in `updateOrbitals()` on every
+  element/excited change — keep thumbnails cheap (44×44).
 - `node_modules/` and `dist/` are generated — never edit or document them.
+
+## Definition of done
+
+`npm run typecheck` clean · `npm test` green · `npm run build` succeeds · for
+UI/render changes, a headless screenshot (`chromium --headless --screenshot`) or
+a manual check. Update the matching `docs/*.md` in the **same commit**.
 
 ## Common tasks
 
 | Want to… | Do this |
 |---|---|
-| Add an element | Extend `SYMBOLS` + `NAMES` in `atoms.ts`. |
-| Add a plot / panel | Add markup in `index.html`, style in `style.css`, draw + wire in `main.ts` (`updateInfo`). |
+| Add an element | Extend `SYMBOLS` + `NAMES` in `atoms.ts` (keep lengths equal). |
+| Add a plot / panel | Markup in `index.html`, style in `style.css`, draw + wire in `main.ts` (`updateInfo`). |
+| Add a UI control | Add the element to `index.html`, add an action fn + listener in the "UI wiring" block of `main.ts`, and add the param to `applyHash`/`syncHash`. |
+| Add a keyboard shortcut | Add a `case` to the `keydown` handler in `main.ts` (it dispatches to the same action fns as the controls). |
+| Add a colour mode | `colorFor()` + `densityColor` in `main.ts`; add an `<option>` to `#colour` in `index.html`. |
 | Change colours / theme | `style.css` variables and the palettes near the top of `main.ts`. |
 | Change the physics | `hydrogen.ts` (+ a test). |
-| Change screening | `zeff()` in `atoms.ts`. |
+| Change screening | `zeff()` / `atomUnits()` in `atoms.ts` (+ a test). |
+| Add a param | `params` in `main.ts` + `applyHash` + `syncHash`. |
 
 ## Deep dives
 
+- `docs/STATUS.md` — what's done, known limits, and prioritised next work.
 - `docs/ARCHITECTURE.md` — data flow and the rebuild pipeline.
 - `docs/PHYSICS.md` — the equations, sampling methods, and every approximation.
-- `docs/UI.md` — layout, the DOM-id map, and the theming variables.
+- `docs/UI.md` — layout, the DOM-id map, theming, colour modes, shortcuts.
 - `soul.md` — why this exists and the design principles to preserve.
