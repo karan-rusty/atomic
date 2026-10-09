@@ -46,6 +46,8 @@ body {
 }
 .pill.tag { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
 .pill.vis { color: var(--dim); border-color: var(--border); }
+.pill.btn { cursor: pointer; color: var(--dim2); }
+.pill.btn:hover { color: var(--accent); border-color: var(--accent-line); }
 
 /* ---------- panels ---------- */
 aside {

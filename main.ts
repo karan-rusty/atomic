@@ -259,6 +259,7 @@ function rebuild(): void {
   marker.visible = false;
   updateInfo();
   updateScaleBar();
+  syncHash();
 }
 
 function frameCloud(): void {
@@ -559,6 +560,30 @@ renderer.domElement.addEventListener('click', () => {
 });
 
 // ---------- UI wiring ----------
+function applyHash(): void {
+  const h = new URLSearchParams(location.hash.slice(1));
+  const el = h.get('el'); if (el && SYMBOLS.includes(el)) params.element = el;
+  const view = h.get('view'); if (view === 'atom' || view === 'orbital') params.view = view;
+  const orb = h.get('orb'); if (orb) params.orbital = orb;
+  const orb2 = h.get('orb2'); if (orb2) params.orbital2 = orb2;
+  const pts = Number(h.get('pts')); if (pts) params.density = Math.max(10000, Math.min(200000, pts));
+  const col = h.get('col'); if (col === 'phase' || col === 'shell' || col === 'density') params.colour = col;
+  params.superpose = h.get('sup') === '1';
+  params.excited = h.get('exc') === '1';
+  params.autoRotate = h.get('rot') !== '0';
+  params.fitView = h.get('fit') !== '0';
+}
+
+function syncHash(): void {
+  const h = new URLSearchParams({
+    el: params.element, view: params.view, orb: params.orbital, orb2: params.orbital2,
+    pts: String(params.density), col: params.colour,
+    sup: params.superpose ? '1' : '0', exc: params.excited ? '1' : '0',
+    rot: params.autoRotate ? '1' : '0', fit: params.fitView ? '1' : '0',
+  });
+  history.replaceState(null, '', '#' + h.toString());
+}
+
 function fillSelect(sel: HTMLSelectElement, values: string[], current: string): void {
   sel.innerHTML = '';
   for (const v of values) {
@@ -585,6 +610,7 @@ function syncView(): void {
   $('orb2Row').classList.toggle('hidden', !(params.view === 'orbital' && params.superpose));
 }
 
+applyHash();
 fillSelect($<HTMLSelectElement>('element'), SYMBOLS, params.element);
 updateOrbitals();
 syncView();
@@ -635,6 +661,21 @@ fitInput.addEventListener('change', () => {
 $<HTMLInputElement>('measure').addEventListener('change', (e) => {
   params.measure = (e.target as HTMLInputElement).checked;
   if (!params.measure) marker.visible = false;
+});
+
+$('copylink').addEventListener('click', () => {
+  syncHash();
+  navigator.clipboard?.writeText(location.href)
+    .then(() => { $('log').textContent = '> link copied'; })
+    .catch(() => { $('log').textContent = '> copy failed'; });
+});
+$('savepng').addEventListener('click', () => {
+  composer.render();
+  const a = document.createElement('a');
+  a.href = renderer.domElement.toDataURL('image/png');
+  a.download = `atomsim-${params.element}-${params.view}.png`;
+  a.click();
+  $('log').textContent = '> PNG saved';
 });
 
 addEventListener('resize', () => {
