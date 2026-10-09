@@ -205,6 +205,12 @@ function drawHist(n: number, l: number, Z: number): void {
   const ctx = cv.getContext('2d')!;
   const w = cv.width, h = cv.height;
   ctx.clearRect(0, 0, w, h);
+
+  const strip = 14; // reserved strip at the bottom for the axis labels
+  const top = 4;
+  const base = h - strip; // bar baseline
+  const plotH = base - top;
+
   const rMax = (4 * n * n) / Z;
   const bars = 48;
   const vals: number[] = [];
@@ -217,17 +223,18 @@ function drawHist(n: number, l: number, Z: number): void {
   }
   const bw = w / bars;
   for (let i = 0; i < bars; i++) {
-    const bh = (vals[i] / max) * (h - 10);
+    const bh = (vals[i] / max) * plotH;
     ctx.fillStyle = `rgba(255,92,158,${0.3 + 0.6 * (vals[i] / max)})`;
-    ctx.fillRect(i * bw + 1, h - 7 - bh, bw - 2, bh);
+    ctx.fillRect(i * bw + 1, base - bh, bw - 2, bh);
   }
   ctx.fillStyle = 'rgba(255,255,255,.15)';
-  ctx.fillRect(0, h - 7, w, 1);
+  ctx.fillRect(0, base, w, 1);
+
   ctx.fillStyle = '#61727a';
   ctx.font = '10px monospace';
-  ctx.fillText('r = 0', 4, h - 0.5);
+  ctx.fillText('r = 0', 4, h - 2);
   ctx.textAlign = 'right';
-  ctx.fillText(`${rMax.toFixed(1)} a₀`, w - 6, h - 0.5);
+  ctx.fillText(`${rMax.toFixed(1)} a₀`, w - 6, h - 2);
   ctx.textAlign = 'left';
 }
 
