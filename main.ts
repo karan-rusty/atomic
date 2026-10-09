@@ -71,13 +71,14 @@ const params = {
   view: 'atom' as 'atom' | 'orbital',
   orbital: '2p_z',
   density: 100000,
-  pointSize: 0.03,
   phaseColor: true,
   autoRotate: true,
 };
 
+const POINT_SCALE = 0.006; // point size as a fraction of the cloud radius
+
 const material = new THREE.PointsMaterial({
-  size: params.pointSize,
+  size: 1, // overwritten per rebuild; scaled to the cloud so tiny clouds don't blob
   map: sprite,
   vertexColors: true,
   transparent: true,
@@ -158,6 +159,7 @@ function rebuild(reframe: boolean): void {
   lastCount = count;
   lastRadius = percentileRadius(positions, count, 0.98);
 
+  material.size = lastRadius * POINT_SCALE;
   axes.scale.setScalar(lastRadius * 1.15);
   nucleus.scale.setScalar(lastRadius * 0.012);
 
