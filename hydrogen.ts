@@ -194,20 +194,52 @@ export function nodeRadii(n: number, l: number, Z: number): number[] {
   return out;
 }
 
+// Azimuthal nodal planes (radians) of the real harmonic Y_lm: the azimuthal
+// factor cos(m*phi) (m>0) or sin(|m|*phi) (m<0) vanishes on |m| planes through
+// the polar axis.
+export function angularNodePlanes(_l: number, m: number): number[] {
+  const am = Math.abs(m);
+  if (am === 0) return [];
+  const out: number[] = [];
+  for (let k = 0; k < am; k++) out.push(m > 0 ? ((2 * k + 1) * Math.PI) / (2 * am) : (k * Math.PI) / am);
+  return out;
+}
+
+// Polar nodal cones (theta in (0, pi)): zeros of the associated-Legendre factor
+// P_l^|m|(cos theta). Evaluated through realY at an azimuth where the azimuthal
+// factor is +1, so only the polar factor's zeros are seen.
+export function angularNodeCones(l: number, m: number): number[] {
+  const am = Math.abs(m);
+  const phi = m < 0 ? Math.PI / (2 * am) : 0;
+  const f = (theta: number) => realY(l, m, theta, phi);
+  const N = 2000;
+  const out: number[] = [];
+  let prev = f((1 / N) * Math.PI) > 0;
+  for (let i = 2; i < N; i++) {
+    const theta = (i / N) * Math.PI;
+    const cur = f(theta) > 0;
+    if (cur !== prev) out.push(theta);
+    prev = cur;
+  }
+  // Snap near-equatorial zeros to pi/2 so callers can treat them as a flat disk.
+  return out.map((t) => (Math.abs(Math.cos(t)) < (1.5 * Math.PI) / N ? Math.PI / 2 : t));
+}
+
 // Sample from |psi_a + psi_b|^2 (a two-orbital superposition) by importance
 // sampling: draw from either orbital, accept with |a+b|^2 / (2(|a|^2+|b|^2)).
-export function sampleSuperposition(a: Orbital, b: Orbital, count: number, Z: number): Cloud {
+// Each orbital uses its own effective charge (its screening differs).
+export function sampleSuperposition(a: Orbital, b: Orbital, count: number, Za: number, Zb: number): Cloud {
   const pool = count * 3;
-  const A = sampleCloud(a.n, a.l, a.m, pool, Z);
-  const B = sampleCloud(b.n, b.l, b.m, pool, Z);
+  const A = sampleCloud(a.n, a.l, a.m, pool, Za);
+  const B = sampleCloud(b.n, b.l, b.m, pool, Zb);
   const positions = new Float32Array(count * 3);
   const signs = new Int8Array(count);
   let k = 0;
   for (let i = 0; i < pool && k < count; i++) {
     for (const src of [A, B]) {
       const x = src.positions[3 * i], y = src.positions[3 * i + 1], z = src.positions[3 * i + 2];
-      const pa = psiAt(a.n, a.l, a.m, Z, x, y, z);
-      const pb = psiAt(b.n, b.l, b.m, Z, x, y, z);
+      const pa = psiAt(a.n, a.l, a.m, Za, x, y, z);
+      const pb = psiAt(b.n, b.l, b.m, Zb, x, y, z);
       const denom = pa * pa + pb * pb;
       const acc = denom > 0 ? ((pa + pb) ** 2) / (2 * denom) : 0;
       if (Math.random() < acc) {

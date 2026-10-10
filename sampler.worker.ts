@@ -13,6 +13,7 @@ interface Req {
   mode: 'atom' | 'orbital' | 'super';
   count: number;
   Z: number;
+  Zb?: number;
   a?: Orbital;
   b?: Orbital;
   units?: AtomUnitMsg[];
@@ -59,7 +60,7 @@ ctx.onmessage = (e: MessageEvent<Req>) => {
   let positions: Float32Array;
   let signs: Int8Array;
   if (m.mode === 'super' && m.b) {
-    ({ positions, signs } = sampleSuperposition(A, m.b, m.count, m.Z));
+    ({ positions, signs } = sampleSuperposition(A, m.b, m.count, m.Z, m.Zb ?? m.Z));
   } else {
     ({ positions, signs } = sampleCloud(A.n, A.l, A.m, m.count, m.Z));
   }
@@ -68,8 +69,10 @@ ctx.onmessage = (e: MessageEvent<Req>) => {
   let max = 1e-30;
   for (let i = 0; i < m.count; i++) {
     const x = positions[3 * i], y = positions[3 * i + 1], z = positions[3 * i + 2];
-    const pa = psiAt(A.n, A.l, A.m, m.Z, x, y, z);
-    const pb = m.mode === 'super' && m.b ? psiAt(m.b.n, m.b.l, m.b.m, m.Z, x, y, z) : 0;
+    const za = m.Z;
+    const zb = m.Zb ?? m.Z;
+    const pa = psiAt(A.n, A.l, A.m, za, x, y, z);
+    const pb = m.mode === 'super' && m.b ? psiAt(m.b.n, m.b.l, m.b.m, zb, x, y, z) : 0;
     psi[2 * i] = pa;
     psi[2 * i + 1] = pb;
     const d = (pa + pb) * (pa + pb);

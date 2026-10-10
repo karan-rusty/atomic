@@ -1,6 +1,6 @@
 // node atoms.test.ts — check electron config + Slater effective charges.
 import assert from 'node:assert';
-import { atomUnits, electronConfig, zeff, SYMBOLS, orbitalsForAtom } from './atoms.ts';
+import { atomUnits, electronConfig, zeff, SYMBOLS, orbitalsForAtom, ATOMIC_MASS, periodOf, groupOf, blockOf, categoryOf } from './atoms.ts';
 
 // Config fills exactly Z electrons.
 for (const Z of [1, 6, 11, 18, 26, 36, 54, 86, 118]) {
@@ -40,5 +40,31 @@ assert.strictEqual(n2p[0].m, null, 'N 2p is spherical');
 const sc3d = atomUnits(21).filter((u) => u.n === 3 && u.l === 2);
 assert.strictEqual(sc3d.length, 1, 'Sc 3d1 -> one orbital');
 assert.ok(sc3d[0].m !== null, 'Sc 3d orbital is directional');
+
+// Element info: masses are 118 long; period/group/block/category spot-checks.
+assert.strictEqual(ATOMIC_MASS.length, 118, 'atomic masses must cover all 118 elements');
+assert.ok(Math.abs(ATOMIC_MASS[0] - 1.008) < 1e-6, 'H mass');
+assert.ok(Math.abs(ATOMIC_MASS[25] - 55.845) < 1e-6, 'Fe mass');
+const info: Array<[number, number, number, string, string]> = [
+  // Z, period, group, block, category
+  [1, 1, 1, 's', 'nonmetal'],
+  [2, 1, 18, 's', 'noble gas'],
+  [6, 2, 14, 'p', 'nonmetal'],
+  [11, 3, 1, 's', 'alkali metal'],
+  [20, 4, 2, 's', 'alkaline earth'],
+  [26, 4, 8, 'd', 'transition metal'],
+  [35, 4, 17, 'p', 'halogen'],
+  [57, 6, 3, 'f', 'lanthanide'],
+  [74, 6, 6, 'd', 'transition metal'],
+  [79, 6, 11, 'd', 'transition metal'],
+  [92, 7, 3, 'f', 'actinide'],
+  [118, 7, 18, 'p', 'noble gas'],
+];
+for (const [Z, p, g, blk, cat] of info) {
+  assert.strictEqual(periodOf(Z), p, `period of Z=${Z}`);
+  assert.strictEqual(groupOf(Z), g, `group of Z=${Z}`);
+  assert.strictEqual(blockOf(Z), blk, `block of Z=${Z}`);
+  assert.strictEqual(categoryOf(Z), cat, `category of Z=${Z}`);
+}
 
 console.log('atoms.ts OK — config + Slater Zeff values verified');
