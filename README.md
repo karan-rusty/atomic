@@ -1,7 +1,7 @@
 # AtomSim
 
-An interactive 3D simulator of **real quantum electron clouds** — the `|ψ|²`
-probability cloud, not the fake Bohr "electrons on rings" model.
+An interactive 3D simulator of quantum electron clouds: the `|ψ|²` probability
+cloud, not the Bohr model's electrons on rings.
 
 Dense points = more likely, sparse = less likely. Colour can show the
 wavefunction phase (+ψ / −ψ), the shell, or the density.
@@ -10,18 +10,19 @@ wavefunction phase (+ψ / −ψ), the shell, or the density.
 
 ## Features
 
-- **Real sampled `|ψ|²`** for hydrogen-like orbitals (`1s … 7p`) and neutral
+- Real sampled `|ψ|²` for hydrogen-like orbitals (`1s … 7p`) and for neutral
   atoms (all 118 elements, Slater-screened hydrogenic shapes).
-- **Atom view** (all occupied shells) and **orbital view** (a single state),
-  including an **excited-state** toggle.
-- **Superposition** of two orbitals — see where they reinforce and cancel, with
-  optional **time evolution** (the cloud oscillates at the beat frequency).
-- **Orbital gallery** — clickable thumbnails of every orbital for the element.
+- Atom view draws every occupied shell, orbital view a single state. An
+  excited-state toggle adds the orbitals above the ground configuration.
+- Superpose two orbitals to see where they reinforce and cancel. Time evolution
+  is optional; the cloud then oscillates at the beat frequency.
+- An orbital gallery gives clickable thumbnails of every orbital for the
+  current element.
 - Live panels: quantum numbers, energy, `⟨r⟩`, `|L|`, `⟨1/r⟩`, most-probable
-  radius, node radii, **R(r)/P(r) plot**, **energy-level ladder**,
-  **emission spectrum**, and a **2D cross-section** heatmap.
-- Colour modes (phase / shell / density), fit-view toggle, measurement mode
-  (click to collapse the cloud to one point).
+  radius, node radii, an R(r)/P(r) plot, an energy-level ladder, an emission
+  spectrum, and a 2D cross-section heatmap.
+- Colour modes (phase / shell / density), a fit-view toggle, and measurement
+  mode, where clicking the cloud collapses it to one point.
 
 ## Run it
 
@@ -35,9 +36,12 @@ Other scripts: `npm run build`, `npm run preview`, `npm run typecheck`,
 
 ## Honesty note
 
-Hydrogen is exact. Everything with more electrons uses **Slater-screened
-hydrogenic orbitals** — an approximation, labelled as `SCREENED` in the UI.
-Filled shells are genuinely spherical. The nucleus marker is not to scale.
+Hydrogen is exact. Anything with more electrons uses Slater-screened hydrogenic
+orbitals, an approximation the UI labels `SCREENED`. Filled shells are
+genuinely spherical. The nucleus marker is not to scale by default; the
+**true scale** toggle shrinks it to its real size, which shows how empty the
+atom is.
+
 See `docs/PHYSICS.md` for the details and `soul.md` for the philosophy.
 
 ## For AI agents / contributors
