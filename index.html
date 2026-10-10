@@ -13,44 +13,52 @@
       <span class="pill" id="fps">— FPS</span>
       <span class="pill tag" id="exactpill">EXACT</span>
       <span class="pill" id="drawcount">0 draws</span>
+      <span class="pill btn" id="keys" title="Keyboard shortcuts (?)">keys</span>
       <span class="pill btn" id="copylink" title="Copy a shareable link (updates the URL)">copy link</span>
       <span class="pill btn" id="savepng" title="Save the current view as a PNG">PNG</span>
     </div>
   </header>
 
   <aside id="left">
-    <div class="sect-label">STATE VECTOR · <span id="stateatom">—</span></div>
-    <div class="bigstate" id="statename">—</div>
-    <div class="qn" id="qn">—</div>
+    <div class="hud">
+      <div class="sect-label">STATE VECTOR · <span id="stateatom">—</span></div>
+      <div class="bigstate" id="statename">—</div>
+      <div class="qn" id="qn">—</div>
+    </div>
     <div class="desc" id="statedesc">—</div>
     <div id="props"></div>
 
-    <div class="plot-wrap">
-      <div class="sect-label">RADIAL R(r) · P(r) <span class="pill tag" id="histpill">EXACT</span></div>
-      <canvas id="rplot" width="272" height="92"></canvas>
-    </div>
+    <details class="plots" id="plots">
+      <summary>PLOTS &amp; DATA</summary>
+      <div class="plot-stack">
+        <div class="plot-wrap">
+          <div class="sect-label">RADIAL R(r) · P(r) <span class="pill tag" id="histpill">EXACT</span></div>
+          <canvas id="rplot" width="272" height="92"></canvas>
+        </div>
 
-    <div class="plot-wrap">
-      <div class="sect-label">ENERGY LEVELS <span class="pill tag" id="energypill">EXACT</span></div>
-      <canvas id="eladder" width="272" height="150"></canvas>
-    </div>
+        <div class="plot-wrap">
+          <div class="sect-label">MEASUREMENT · <span id="meascount">0</span> <span class="pill tag">MONTE-CARLO</span></div>
+          <canvas id="meas" width="272" height="92"></canvas>
+        </div>
 
-    <div class="plot-wrap">
-      <div class="sect-label">EMISSION SPECTRUM <span class="pill tag">SCREENED</span></div>
-      <canvas id="spectrum" width="272" height="42"></canvas>
-    </div>
+        <div class="plot-wrap">
+          <div class="sect-label">ENERGY LEVELS <span class="pill tag" id="energypill">EXACT</span></div>
+          <canvas id="eladder" width="272" height="150"></canvas>
+        </div>
 
-    <div class="plot-wrap">
-      <div class="sect-label">ORBITAL GALLERY</div>
-      <div class="gallery" id="gallery"></div>
-    </div>
+        <div class="plot-wrap">
+          <div class="sect-label">EMISSION SPECTRUM <span class="pill tag">SCREENED</span></div>
+          <canvas id="spectrum" width="272" height="42"></canvas>
+        </div>
+      </div>
+    </details>
   </aside>
 
   <main id="viewport">
     <div class="overlay tl" id="drawlabel">|ψ|² Monte-Carlo · 0 draws</div>
 
     <div class="overlay tr">
-      <div class="mini-label">2D CROSS-SECTION · XZ</div>
+      <div class="mini-label">2D CROSS-SECTION · <span id="xsecplane">XZ</span></div>
       <canvas id="xsec" width="150" height="150"></canvas>
     </div>
 
@@ -83,6 +91,7 @@
       <div class="sect-label">ORBITAL</div>
       <label class="row"><span>state</span><select id="orbital"></select></label>
       <label class="row"><span>superpose</span><input id="superpose" type="checkbox" /></label>
+      <label class="row"><span>nodes</span><input id="nodes" type="checkbox" /></label>
       <label class="row" id="orb2Row"><span>+ state</span><select id="orbital2"></select></label>
       <label class="row" id="evolveRow"><span>evolve</span><input id="evolve" type="checkbox" /></label>
     </section>
@@ -95,7 +104,19 @@
       </label>
       <label class="row"><span>auto-rotate</span><input id="rot" type="checkbox" /></label>
       <label class="row"><span>fit view</span><input id="fit" type="checkbox" /></label>
+      <label class="row"><span>true scale</span><input id="truescale" type="checkbox" /></label>
       <label class="row"><span>measure</span><input id="measure" type="checkbox" /></label>
+      <div class="row"><span>tally</span><button id="measure100" type="button">take 100</button></div>
+    </section>
+
+    <section>
+      <div class="sect-label">DISPLAY</div>
+      <label class="row"><span>units</span>
+        <select id="units"><option value="a0">a₀ · bohr</option><option value="pm">pm</option><option value="ang">Å</option></select>
+      </label>
+      <label class="row"><span>slice</span>
+        <select id="plane"><option value="xz">XZ</option><option value="xy">XY</option><option value="yz">YZ</option></select>
+      </label>
     </section>
 
     <details class="physics">
@@ -112,6 +133,48 @@
 
     <div class="log" id="log" aria-live="polite">&gt; ready</div>
   </aside>
+
+  <footer id="gallerybar">
+    <div class="sect-label">ORBITAL GALLERY</div>
+    <div class="gallery" id="gallery"></div>
+  </footer>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <div id="help" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="help-title">
+      <button id="helpclose" class="modal-x" type="button" aria-label="Close">×</button>
+      <div class="modal-title" id="help-title">KEYS &amp; TIPS</div>
+      <div class="modal-grid">
+        <div>
+          <div class="sect-label">KEYBOARD</div>
+          <table class="keys">
+            <tr><td><kbd>v</kbd></td><td>view: atom / orbital</td></tr>
+            <tr><td><kbd>r</kbd></td><td>auto-rotate</td></tr>
+            <tr><td><kbd>f</kbd></td><td>fit view</td></tr>
+            <tr><td><kbd>c</kbd></td><td>cycle colour mode</td></tr>
+            <tr><td><kbd>e</kbd></td><td>excited states</td></tr>
+            <tr><td><kbd>m</kbd></td><td>measure mode</td></tr>
+            <tr><td><kbd>t</kbd></td><td>time evolution</td></tr>
+            <tr><td><kbd>s</kbd></td><td>save PNG</td></tr>
+            <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>previous / next element</td></tr>
+            <tr><td><kbd>?</kbd></td><td>this panel</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>close / clear marker</td></tr>
+          </table>
+        </div>
+        <div>
+          <div class="sect-label">MOUSE &amp; TIPS</div>
+          <ul class="tips">
+            <li>Drag to orbit · scroll to zoom.</li>
+            <li>Click an <b>orbital gallery</b> thumbnail to switch state.</li>
+            <li>Click an <b>energy level</b> or a <b>spectral line</b> to jump to that shell.</li>
+            <li><b>measure</b> on → click the cloud to collapse it to one position.</li>
+            <li>Dense means likely: the cloud samples the real |ψ|².</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="/main.ts"></script>
 </body>
