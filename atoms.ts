@@ -1,7 +1,3 @@
-// atoms.ts — neutral elements (Z = 1..118) with Slater effective nuclear charge.
-// Multi-electron atoms have no closed-form wavefunction; we approximate each
-// occupied subshell as a hydrogenic orbital screened by the other electrons.
-
 import { subshellOrbitals, type Orbital } from './hydrogen.ts';
 
 export const SYMBOLS = [
@@ -58,7 +54,6 @@ const AUFBAU: Array<[number, number]> = [
 ];
 const CAPACITY = [2, 6, 10, 14];
 
-// Occupied subshells of the neutral atom with nuclear charge Z.
 export function electronConfig(Z: number): Subshell[] {
   const out: Subshell[] = [];
   let left = Z;
@@ -71,8 +66,6 @@ export function electronConfig(Z: number): Subshell[] {
   return out;
 }
 
-// Slater group order: (ns,np) share a group; nd and nf are their own.
-// block 0 = s/p, 2 = d, 3 = f.
 const SLATER_ORDER: Array<[number, number]> = (() => {
   const o: Array<[number, number]> = [];
   for (let n = 1; n <= 7; n++) {
@@ -121,7 +114,6 @@ export function orbitalsForAtom(Z: number): Record<string, Orbital> {
   return map;
 }
 
-// Standard atomic weights (u); radioactive elements use their most stable isotope.
 export const ATOMIC_MASS: number[] = [
   1.008, 4.0026, 6.94, 9.0122, 10.81, 12.011, 14.007, 15.999, 18.998, 20.180,
   22.990, 24.305, 26.982, 28.085, 30.974, 32.06, 35.45, 39.95, 39.098, 40.078,
@@ -147,7 +139,6 @@ export function periodOf(Z: number): number {
   return 7;
 }
 
-// Periodic-table group (1–18); lanthanides/actinides are placed in group 3.
 export function groupOf(Z: number): number {
   const p = periodOf(Z);
   if (p === 1) return Z === 1 ? 1 : 18;
@@ -185,7 +176,7 @@ export function categoryOf(Z: number): string {
 export interface AtomUnit {
   n: number;
   l: number;
-  m: number | null; // null = spherical (filled or half-filled shell)
+  m: number | null;
   ze: number;
 }
 
@@ -195,9 +186,6 @@ function mOrder(l: number): number[] {
   return out;
 }
 
-// Occupied sampling units for an atom. Filled (or half-filled) shells are
-// spherical; open shells follow Hund's rule (singly-occupy m first), so e.g.
-// carbon 2p² shows two lobes and nitrogen 2p³ is spherical.
 export function atomUnits(Z: number): AtomUnit[] {
   const units: AtomUnit[] = [];
   for (const s of electronConfig(Z)) {

@@ -1,13 +1,9 @@
-// hydrogen.ts — hydrogen-like wavefunctions.
-// Atomic units: a0 = 1, Z = 1. No browser deps, so the node test can import it.
-
 const factCache: number[] = [1];
 function fact(k: number): number {
   for (let i = factCache.length; i <= k; i++) factCache[i] = factCache[i - 1] * i;
   return factCache[k];
 }
 
-// Generalized Laguerre L_k^alpha(x) via the standard recurrence.
 function laguerre(k: number, alpha: number, x: number): number {
   let prev = 1;
   if (k === 0) return prev;
@@ -20,14 +16,12 @@ function laguerre(k: number, alpha: number, x: number): number {
   return curr;
 }
 
-// Radial wavefunction R_nl(r).
 export function radial(n: number, l: number, r: number): number {
   const rho = (2 * r) / n;
   const norm = Math.sqrt((2 / n) ** 3 * (fact(n - l - 1) / (2 * n * fact(n + l))));
   return norm * Math.exp(-r / n) * rho ** l * laguerre(n - l - 1, 2 * l + 1, rho);
 }
 
-// Associated Legendre P_l^m(x), x = cos(theta), via recurrence.
 function plm(l: number, m: number, x: number): number {
   let pmm = 1;
   if (m > 0) {
@@ -50,7 +44,6 @@ function plm(l: number, m: number, x: number): number {
   return pll;
 }
 
-// Real spherical harmonic Y_lm(theta, phi).
 export function realY(l: number, m: number, theta: number, phi: number): number {
   const am = Math.abs(m);
   const norm = Math.sqrt(((2 * l + 1) / (4 * Math.PI)) * (fact(l - am) / fact(l + am)));
@@ -65,9 +58,6 @@ export interface Cloud {
   signs: Int8Array;
 }
 
-// Sample `count` electron positions from |psi_nlm|^2.
-// `Z` is the effective nuclear charge (hydrogenic shape scaled by 1/Z).
-// Returns Cartesian positions and the sign of psi at each point (for phase color).
 export function sampleCloud(n: number, l: number, m: number, count: number, Z = 1): Cloud {
   const rMax = Math.max(10, 5 * n * n);
 
@@ -78,9 +68,7 @@ export function sampleCloud(n: number, l: number, m: number, count: number, Z = 
     const v = r * r * radial(n, l, r) ** 2;
     if (v > pmax) pmax = v;
   }
-  pmax *= 1.001; // guard against grid under-sampling the true peak
-
-  // Peak of |Y|^2 over the sphere.
+  pmax *= 1.001;
   let ymax2 = 0;
   for (let it = 0; it <= 360; it++) {
     const theta = (it / 360) * Math.PI;
@@ -95,15 +83,13 @@ export function sampleCloud(n: number, l: number, m: number, count: number, Z = 
   const signs = new Int8Array(count);
 
   for (let k = 0; k < count; k++) {
-    // Radii and angles are independent in |psi|^2, so sample each from its
-    // own marginal by rejection.
     let r: number;
-    for (;;) {
+    for (; ;) {
       r = Math.random() * rMax;
       if (Math.random() * pmax < r * r * radial(n, l, r) ** 2) break;
     }
     let theta: number, phi: number, yv: number;
-    for (;;) {
+    for (; ;) {
       theta = Math.acos(2 * Math.random() - 1); // uniform in cos(theta)
       phi = Math.random() * 2 * Math.PI;
       yv = realY(l, m, theta, phi);
@@ -115,14 +101,10 @@ export function sampleCloud(n: number, l: number, m: number, count: number, Z = 
     positions[3 * k + 2] = r * Math.cos(theta);
     signs[k] = radial(n, l, r) * yv >= 0 ? 1 : -1;
   }
-  // shortcut: rejection sampling; swap to inverse-CDF tables if high-n
-  // clouds (n>=4, >=500k points) cause a visible hitch.
   if (Z !== 1) for (let i = 0; i < positions.length; i++) positions[i] /= Z;
   return { positions, signs };
 }
 
-// Sample `count` points from a filled subshell: radial |R_nl|^2, isotropic
-// angle (sum over m of |Y_lm|^2 is constant, so a full shell is spherical).
 export function sampleShell(n: number, l: number, Z: number, count: number): Float32Array {
   const rMax = Math.max(10, 5 * n * n);
   let pmax = 0;
@@ -136,7 +118,7 @@ export function sampleShell(n: number, l: number, Z: number, count: number): Flo
   const positions = new Float32Array(count * 3);
   for (let k = 0; k < count; k++) {
     let r: number;
-    for (;;) {
+    for (; ;) {
       r = Math.random() * rMax;
       if (Math.random() * pmax < r * r * radial(n, l, r) ** 2) break;
     }
@@ -156,15 +138,12 @@ export interface Orbital {
   m: number;
 }
 
-// Signed wavefunction psi_nlm at a world point (Z^{3/2} factor omitted; it is
-// constant for a given Z, so it cancels in densities and superpositions).
 export function psiAt(n: number, l: number, m: number, Z: number, x: number, y: number, z: number): number {
   const r = Math.hypot(x, y, z);
   if (r < 1e-12) return radial(n, l, 0) * realY(l, m, 0, 0);
   return radial(n, l, Z * r) * realY(l, m, Math.acos(z / r), Math.atan2(y, x));
 }
 
-// Radius at which the radial density r^2 R(r)^2 peaks.
 export function mostProbableRadius(n: number, l: number, Z: number): number {
   const rMax = (5 * n * n) / Z;
   let best = 0;
@@ -180,7 +159,6 @@ export function mostProbableRadius(n: number, l: number, Z: number): number {
   return best;
 }
 
-// Radii of the radial nodes (zeros of R(r)) in (0, rMax].
 export function nodeRadii(n: number, l: number, Z: number): number[] {
   const rMax = (5 * n * n) / Z;
   const out: number[] = [];
@@ -194,9 +172,6 @@ export function nodeRadii(n: number, l: number, Z: number): number[] {
   return out;
 }
 
-// Azimuthal nodal planes (radians) of the real harmonic Y_lm: the azimuthal
-// factor cos(m*phi) (m>0) or sin(|m|*phi) (m<0) vanishes on |m| planes through
-// the polar axis.
 export function angularNodePlanes(_l: number, m: number): number[] {
   const am = Math.abs(m);
   if (am === 0) return [];
@@ -205,9 +180,6 @@ export function angularNodePlanes(_l: number, m: number): number[] {
   return out;
 }
 
-// Polar nodal cones (theta in (0, pi)): zeros of the associated-Legendre factor
-// P_l^|m|(cos theta). Evaluated through realY at an azimuth where the azimuthal
-// factor is +1, so only the polar factor's zeros are seen.
 export function angularNodeCones(l: number, m: number): number[] {
   const am = Math.abs(m);
   const phi = m < 0 ? Math.PI / (2 * am) : 0;
@@ -221,13 +193,9 @@ export function angularNodeCones(l: number, m: number): number[] {
     if (cur !== prev) out.push(theta);
     prev = cur;
   }
-  // Snap near-equatorial zeros to pi/2 so callers can treat them as a flat disk.
   return out.map((t) => (Math.abs(Math.cos(t)) < (1.5 * Math.PI) / N ? Math.PI / 2 : t));
 }
 
-// Sample from |psi_a + psi_b|^2 (a two-orbital superposition) by importance
-// sampling: draw from either orbital, accept with |a+b|^2 / (2(|a|^2+|b|^2)).
-// Each orbital uses its own effective charge (its screening differs).
 export function sampleSuperposition(a: Orbital, b: Orbital, count: number, Za: number, Zb: number): Cloud {
   const pool = count * 3;
   const A = sampleCloud(a.n, a.l, a.m, pool, Za);
@@ -252,7 +220,6 @@ export function sampleSuperposition(a: Orbital, b: Orbital, count: number, Za: n
       }
     }
   }
-  // Fallback if too few accepted (very different orbitals): top up from A.
   for (let i = 0; k < count && i < pool; i++) {
     positions[3 * k] = A.positions[3 * i];
     positions[3 * k + 1] = A.positions[3 * i + 1];
@@ -271,7 +238,6 @@ const F: Record<string, string> = {
   '-2': 'f_xyz', '3': 'f_x(x2-3y2)', '-3': 'f_y(3x2-y2)',
 };
 
-// Named orbitals of a single subshell (all m), e.g. (2,1) -> 2p_z, 2p_x, 2p_y.
 export function subshellOrbitals(n: number, l: number): Record<string, Orbital> {
   const byL = [S, P, D, F];
   const map: Record<string, Orbital> = {};
