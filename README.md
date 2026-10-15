@@ -41,7 +41,3 @@ orbitals, an approximation the UI labels `SCREENED`. Filled shells are
 genuinely spherical. The nucleus marker is not to scale by default; the
 **true scale** toggle shrinks it to its real size, which shows how empty the
 atom is.
-
-## For AI agents / contributors
-
-Start with [`AGENTS.md`](AGENTS.md), then [`docs/`](docs/).
