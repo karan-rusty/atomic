@@ -42,8 +42,6 @@ genuinely spherical. The nucleus marker is not to scale by default; the
 **true scale** toggle shrinks it to its real size, which shows how empty the
 atom is.
 
-See `docs/PHYSICS.md` for the details and `soul.md` for the philosophy.
-
 ## For AI agents / contributors
 
 Start with [`AGENTS.md`](AGENTS.md), then [`docs/`](docs/).
