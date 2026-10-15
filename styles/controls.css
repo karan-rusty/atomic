@@ -1,0 +1,309 @@
+/* ---------- right: controls ---------- */
+section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--dim);
+}
+.row > span {
+  flex: 0 0 84px;
+}
+.row select,
+.row input[type='range'] {
+  flex: 1;
+  min-width: 0;
+}
+.row button {
+  background: var(--panel-hi);
+  color: var(--dim2);
+  border: 1px solid var(--border-hi);
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    color 0.12s ease,
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+.row button:hover {
+  color: var(--accent);
+  border-color: var(--accent-line);
+}
+.row button:active {
+  background: var(--accent-soft);
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--panel-hi);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  border: 1px solid var(--border-hi);
+  border-radius: 4px;
+  padding: 5px 26px 5px 8px;
+  outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238b9aa2' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: border-color 0.12s ease;
+}
+select:hover,
+select:focus {
+  border-color: var(--accent-line);
+}
+
+/* themed dropdown — sees the native <select> hidden and replaces its OS popup */
+.native-hidden {
+  display: none !important;
+}
+.select {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  cursor: pointer;
+  background: var(--panel-hi);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  border: 1px solid var(--border-hi);
+  border-radius: 4px;
+  padding: 5px 8px;
+  transition: border-color 0.12s ease;
+}
+.select-trigger:hover,
+.select-trigger.open {
+  border-color: var(--accent-line);
+}
+.select-trigger::after {
+  content: '';
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-right: 1.4px solid var(--dim2);
+  border-bottom: 1.4px solid var(--dim2);
+  transform: rotate(45deg) translateY(-1px);
+  transition: transform 0.12s ease;
+}
+.select-trigger.open::after {
+  transform: rotate(-135deg) translateY(-1px);
+}
+.select-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-menu {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--panel-hi);
+  border: 1px solid var(--accent-line);
+  border-radius: 6px;
+  padding: 6px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+}
+.select-menu[hidden] {
+  display: none;
+}
+.select-search {
+  background: var(--panel);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  border: 1px solid var(--border-hi);
+  border-radius: 4px;
+  padding: 4px 8px;
+  outline: none;
+}
+.select-search:focus {
+  border-color: var(--accent-line);
+}
+.select-options {
+  overflow-y: auto;
+  max-height: 288px;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-hi) transparent;
+}
+.select-options::-webkit-scrollbar {
+  width: 8px;
+}
+.select-options::-webkit-scrollbar-track {
+  background: transparent;
+}
+.select-options::-webkit-scrollbar-thumb {
+  background: var(--border-hi);
+  border-radius: 4px;
+}
+.select-option {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 4px;
+  color: var(--dim2);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.select-option:hover {
+  background: var(--border);
+  color: var(--text);
+}
+.select-option.active {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.select-option[aria-selected='true'] {
+  color: var(--accent);
+}
+
+/* scroll footer: a neutral strip that is part of the dropdown, click to page down one row */
+.select-hint {
+  flex: 0 0 auto;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  margin-top: 2px;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+.select-hint.show {
+  display: flex;
+}
+.select-hint::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  margin-bottom: 2px;
+  border-right: 1.5px solid var(--dim2);
+  border-bottom: 1.5px solid var(--dim2);
+  transform: rotate(45deg);
+  transition: border-color 0.12s ease;
+}
+.select-hint:hover::after {
+  border-color: var(--text);
+}
+
+/* range: thin track + round accent thumb (matches the switches) */
+input[type='range'] {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+  height: 18px;
+}
+input[type='range']::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--border-hi);
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -5px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--accent-line);
+}
+input[type='range']::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--border-hi);
+}
+input[type='range']::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--accent-line);
+}
+/* Switch-style toggle (shadcn Switch pattern, no deps): pill track + sliding thumb */
+input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  margin-left: auto; /* right-align, like the selects */
+  width: 36px;
+  height: 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid var(--border-hi);
+  background-color: var(--panel);
+  background-image: radial-gradient(circle closest-side, var(--dim2) 82%, transparent);
+  background-repeat: no-repeat;
+  background-size: 12px 12px;
+  background-position: 12% 50%;
+  transition:
+    background-position 0.18s ease,
+    background-color 0.18s ease,
+    border-color 0.18s ease;
+}
+input[type='checkbox']:hover {
+  border-color: var(--accent-line);
+}
+input[type='checkbox']:checked {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  background-image: radial-gradient(circle closest-side, #fff 82%, transparent);
+  background-position: 88% 50%;
+}
+
+.btnlist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.btnlist button {
+  text-align: left;
+  background: var(--panel-hi);
+  color: var(--dim2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    color 0.12s ease,
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+.btnlist button:hover {
+  border-color: var(--border-hi);
+  color: var(--text);
+}
+.btnlist button.active {
+  color: var(--accent);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}

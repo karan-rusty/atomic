@@ -1,0 +1,51 @@
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/IBMPlexMono-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/IBMPlexMono-Bold.woff2') format('woff2');
+}
+
+:root {
+  --bg: #0a0d10;
+  --panel: #0b0f12;
+  --panel-hi: #0e1418;
+  --border: #1a2328;
+  --border-hi: #263238;
+  --text: #c7d1d6;
+  --dim: #61727a;
+  --dim2: #8b9aa2;
+  --accent: #ff5c9e;
+  --accent-soft: rgba(255, 92, 158, 0.12);
+  --accent-line: rgba(255, 92, 158, 0.4);
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  display: grid;
+  grid-template-columns: 300px 1fr 316px;
+  grid-template-rows: 46px 1fr auto;
+  height: 100vh;
+}

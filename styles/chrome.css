@@ -1,0 +1,110 @@
+/* ---------- top bar ---------- */
+#topbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #0d1215, #0a0d10);
+}
+.brand {
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}
+.crumb {
+  color: var(--dim2);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- pills ---------- */
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-hi);
+  color: var(--dim2);
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition:
+    color 0.12s ease,
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+.pill.tag {
+  color: var(--accent);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.pill.vis {
+  color: var(--dim);
+  border-color: var(--border);
+}
+.pill.btn {
+  cursor: pointer;
+  color: var(--dim2);
+}
+.pill.btn:hover {
+  color: var(--accent);
+  border-color: var(--accent-line);
+}
+
+/* ---------- panels ---------- */
+aside {
+  background: var(--panel);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-hi) transparent;
+}
+aside::-webkit-scrollbar {
+  width: 9px;
+}
+aside::-webkit-scrollbar-track {
+  background: transparent;
+}
+aside::-webkit-scrollbar-thumb {
+  background: var(--border-hi);
+  border-radius: 5px;
+  border: 2px solid var(--panel);
+}
+aside::-webkit-scrollbar-thumb:hover {
+  background: var(--dim);
+}
+#left {
+  border-right: 1px solid var(--border);
+}
+#right {
+  border-left: 1px solid var(--border);
+}
+
+.sect-label {
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sect-label::before {
+  content: '◦';
+  color: var(--accent);
+}
+.sect-label span.pill {
+  margin-left: auto;
+}

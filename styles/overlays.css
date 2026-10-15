@@ -1,0 +1,125 @@
+/* transient feedback (copy link, PNG, …) so it isn't lost in the log */
+#toast {
+  position: fixed;
+  top: 58px;
+  left: 50%;
+  transform: translate(-50%, -8px);
+  padding: 7px 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  background: var(--panel-hi);
+  color: var(--text);
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+  z-index: 10;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+#toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* measure mode reads as a targeting cursor */
+#viewport.measuring {
+  cursor: crosshair;
+}
+
+/* ---------- modal (keys & tips) ---------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 6, 8, 0.62);
+  backdrop-filter: blur(2px);
+}
+.modal[hidden] {
+  display: none;
+}
+.modal-card {
+  position: relative;
+  width: min(640px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  background: var(--panel-hi);
+  border: 1px solid var(--accent-line);
+  border-radius: 8px;
+  padding: 18px 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+.modal-x {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--dim2);
+  font-family: var(--mono);
+  font-size: 20px;
+  line-height: 1;
+}
+.modal-x:hover {
+  color: var(--accent);
+}
+.modal-title {
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 1.4px;
+  margin-bottom: 14px;
+}
+.modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+.keys {
+  border-collapse: collapse;
+  margin-top: 8px;
+  width: 100%;
+}
+.keys td {
+  padding: 3px 0;
+  color: var(--dim2);
+  vertical-align: top;
+}
+.keys td:first-child {
+  width: 74px;
+}
+kbd {
+  display: inline-block;
+  min-width: 16px;
+  text-align: center;
+  padding: 1px 6px;
+  border: 1px solid var(--border-hi);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.tips {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  color: var(--dim2);
+}
+.tips li {
+  margin-bottom: 6px;
+}
+.tips b {
+  color: var(--text);
+  font-weight: 400;
+}
+@media (max-width: 560px) {
+  .modal-grid {
+    grid-template-columns: 1fr;
+  }
+}
